@@ -1,0 +1,22 @@
+{
+  "name": "silhouette-ar-game",
+  "version": "1.0.0",
+  "private": true,
+  "description": "СИЛУЭТ — браузерная AR-игра на камеру: повтори позу идущей тени и удержи контур.",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs",
+    "test": "node tests/run.mjs && node tests/check-html.mjs",
+    "shots": "node tools/capture.mjs",
+    "camera-test": "node tools/camera-test.mjs"
+  },
+  "keywords": [
+    "ar",
+    "pose",
+    "mediapipe",
+    "game",
+    "browser",
+    "camera"
+  ],
+  "license": "MIT"
+}

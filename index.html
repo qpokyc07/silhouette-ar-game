@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05070c" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="СИЛУЭТ — браузерная AR-игра на камеру телефона. Повтори позу идущей на вас тени и не задень её контур. Соло и дуэль на одном телефоне." />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="ru_RU" />
+<meta property="og:site_name" content="СИЛУЭТ" />
+<meta property="og:title" content="СИЛУЭТ — AR-игра на камеру" />
+<meta property="og:description" content="На вас идёт тень. Повторите её позу и замрите. Один телефон, камера и до двух игроков." />
+<meta property="og:image" content="docs/preview-intro.webp" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="СИЛУЭТ — AR-игра на камеру" />
+<meta name="twitter:description" content="Повтори позу идущей тени и не задень контур. Соло и дуэль на одном телефоне." />
+<meta name="twitter:image" content="docs/preview-intro.webp" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="СИЛУЭТ" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>СИЛУЭТ — AR-игра на камеру</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" type="image/svg+xml" href="icon.svg" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Russo+One&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-mode="intro">
+
+<div id="app">
+  <video id="cam" playsinline autoplay muted aria-hidden="true"></video>
+  <div id="cam-shade" aria-hidden="true"></div>
+  <canvas id="fx" aria-hidden="true"></canvas>
+  <div id="grain" aria-hidden="true"></div>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <!-- ================= ЗАГРУЗКА ================= -->
+  <div id="loader" class="overlay" hidden>
+    <div class="loader-card">
+      <div class="sigil" aria-hidden="true">影</div>
+      <p class="eyebrow">AR SYSTEM / 01</p>
+      <h2 id="loader-title">ВКЛЮЧАЮ КАМЕРУ</h2>
+      <p id="loader-text" class="loader-text">Разрешите доступ, когда браузер спросит</p>
+      <div id="loader-bar" class="loader-bar"><i id="loader-fill"></i></div>
+      <div id="loader-actions" class="loader-actions" hidden>
+        <button id="btn-loader-retry" class="btn btn--primary">ПОВТОРИТЬ</button>
+        <button id="btn-loader-demo" class="btn btn--ghost">ДЕМО БЕЗ КАМЕРЫ</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ИНТРО ================= -->
+  <section id="screen-intro" class="screen screen--intro">
+    <div class="intro-word" aria-hidden="true">影</div>
+    <div class="intro-shell">
+      <main class="intro-copy">
+        <div class="brand-line">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>KAGE SHOW / 影のゲーム</span>
+        </div>
+        <h1 class="hero-title" data-text="СИЛУЭТ">СИЛУЭТ</h1>
+        <p class="hero-tagline">Стань тенью. Не задень пустоту.</p>
+        <p class="hero-desc">
+          На вас идёт живой силуэт. Повторите его позу и застыньте: если контуры совпадут —
+          тень пройдёт сквозь вас. Один телефон, камера и до двух игроков.
+        </p>
+
+        <div class="hero-actions">
+          <button id="btn-camera" class="btn btn--primary btn--big">
+            <span class="btn-kicker">AR</span>
+            ВКЛЮЧИТЬ КАМЕРУ
+          </button>
+          <button id="btn-help-intro" class="btn btn--ghost">КАК ИГРАТЬ</button>
+        </div>
+        <p id="intro-note" class="micro-note">Нужно разрешение на камеру. Видео остаётся на этом устройстве.</p>
+
+        <div class="quick-steps" aria-label="Как это работает">
+          <div><b>01</b><span>Встаньте так, чтобы камера видела вас целиком</span></div>
+          <div><b>02</b><span>Повторите позу тени и замрите</span></div>
+          <div><b>03</b><span>Удержите контур до вспышки</span></div>
+        </div>
+      </main>
+
+      <aside class="intro-side">
+        <div class="poster">
+          <div class="poster-top">
+            <span>ONE PHONE / TWO PLAYERS</span>
+            <span>2026</span>
+          </div>
+          <div class="poster-figure" aria-hidden="true">
+            <svg viewBox="0 0 120 200" role="presentation">
+              <circle cx="60" cy="26" r="16" />
+              <path d="M52 42h16l5 54-7 38H52l-7-38z" />
+              <path d="M53 48 22 78l7 9 28-22" />
+              <path d="M67 48l31 30-7 9-28-22" />
+              <path d="m51 132-17 55h14l15-36" />
+              <path d="m69 132 17 55H72l-15-36" />
+            </svg>
+          </div>
+          <div class="poster-bottom">
+            <span>ПОВТОРИ / ЗАМРИ / ПРОЙДИ</span>
+            <span class="poster-dot"></span>
+          </div>
+        </div>
+        <div class="record-strip">
+          <span>ЛИЧНЫЙ РЕКОРД</span>
+          <strong data-best-solo>—</strong>
+        </div>
+      </aside>
+    </div>
+    <footer class="intro-footer">
+      <span>Работает в мобильном браузере</span>
+      <span>Камера не покидает телефон</span>
+      <span>HTTPS обязателен</span>
+    </footer>
+  </section>
+
+  <!-- ================= МЕНЮ ================= -->
+  <section id="screen-menu" class="screen screen--menu" hidden>
+    <header class="top-controls">
+      <div class="brand-small"><span class="brand-mark brand-mark--small" aria-hidden="true"><i></i><i></i><i></i></span>СИЛУЭТ</div>
+      <div class="top-actions">
+        <button class="icon-btn" data-sound aria-label="Звук" title="Звук"><span class="icon-sound">♪</span><span class="sound-label">ЗВУК</span></button>
+        <button class="icon-btn" data-full aria-label="Полный экран" title="Полный экран">⛶</button>
+        <button id="btn-help" class="icon-btn" aria-label="Как играть" title="Как играть">?</button>
+      </div>
+    </header>
+
+    <div class="menu-main">
+      <p class="eyebrow">СЦЕНА ЖДЁТ / CHOOSE YOUR SHADOW</p>
+      <h1 class="menu-title">ВЫБЕРИ РЕЖИМ</h1>
+      <p class="menu-lead">Один игрок против тени — или дуэль, где каждый проходит свою серию и бросает вызов другому.</p>
+
+      <div class="mode-grid">
+        <button id="btn-solo" class="mode-card mode-card--solo">
+          <span class="mode-index">01</span>
+          <span class="mode-art" aria-hidden="true">
+            <svg viewBox="0 0 100 160"><circle cx="50" cy="24" r="13"/><path d="M43 38h14l6 46-8 34H46l-8-34z"/><path d="M45 45 20 58l5 9 25-9"/><path d="M55 45l25 13-5 9-25-9"/><path d="m47 118-10 37h12l9-26"/><path d="m53 118 10 37H51l-9-26"/></svg>
+          </span>
+          <span class="mode-copy">
+            <span class="mode-kicker">ОДИН НА ОДИН С ТЕНЬЮ</span>
+            <strong>СОЛО</strong>
+            <span class="mode-meta">5 теней · 3 жизни · личный рекорд</span>
+          </span>
+          <span class="mode-cta">НАЧАТЬ <i>→</i></span>
+        </button>
+
+        <button id="btn-duel" class="mode-card mode-card--duel">
+          <span class="mode-index">02</span>
+          <span class="mode-art mode-art--duo" aria-hidden="true">
+            <svg viewBox="0 0 100 160"><circle cx="34" cy="28" r="11"/><path d="M28 40h12l5 42-7 32H30l-7-32z"/><path d="M30 46 10 58l4 8 22-8"/><path d="M40 46l21 12-4 8-22-8"/><path d="m32 114-8 34h10l8-24"/><path d="m38 114 8 34H36l-8-24"/><circle cx="70" cy="35" r="10"/><path d="M64 46h12l4 38-6 28H66l-6-28z"/><path d="m66 51-16 11 3 7 17-7"/><path d="M76 51l15 11-3 7-17-7"/><path d="m68 112-7 30h9l7-22"/><path d="m73 112 7 30h-9l-7-22"/></svg>
+          </span>
+          <span class="mode-copy">
+            <span class="mode-kicker">ЛОКАЛЬНАЯ ДУЭЛЬ</span>
+            <strong>ДУЭЛЬ</strong>
+            <span class="mode-meta">2 игрока по очереди · по 5 теней</span>
+          </span>
+          <span class="mode-cta">ВЫЗВАТЬ <i>→</i></span>
+        </button>
+      </div>
+
+      <div class="menu-bottom">
+        <div class="menu-record"><span>ТВОЙ РЕКОРД В СОЛО</span><b data-best-solo>—</b></div>
+        <p class="menu-tip">Поставьте телефон на подставку напротив себя. В кадре должны быть голова, руки и стопы.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ДУЭЛЬ: ИМЕНА ================= -->
+  <section id="screen-duel" class="screen screen--duel" hidden>
+    <div class="duel-setup-card">
+      <p class="eyebrow">ЛОКАЛЬНАЯ ДУЭЛЬ / 02</p>
+      <h1>КТО БРОСАЕТ<br>ТЕНЬ?</h1>
+      <p class="duel-lead">Игроки проходят одинаковое число теней по очереди. Счёт и точность решают, кто сильнее.</p>
+
+      <div class="name-grid">
+        <label class="name-field">
+          <span>ИГРОК 1</span>
+          <input id="name1" maxlength="14" value="ИГРОК 1" autocomplete="off" spellcheck="false" />
+        </label>
+        <div class="versus" aria-hidden="true">VS</div>
+        <label class="name-field">
+          <span>ИГРОК 2</span>
+          <input id="name2" maxlength="14" value="ИГРОК 2" autocomplete="off" spellcheck="false" />
+        </label>
+      </div>
+
+      <div class="duel-rules-row">
+        <span><b>5</b> теней каждому</span>
+        <span><b>3</b> жизни</span>
+        <span><b>1</b> телефон</span>
+      </div>
+
+      <div class="duel-actions">
+        <button id="btn-duel-back" class="btn btn--ghost">← НАЗАД</button>
+        <button id="btn-duel-start" class="btn btn--primary btn--big">НАЧАТЬ ДУЭЛЬ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= СПРАВКА ================= -->
+  <section id="screen-help" class="screen screen--help" hidden>
+    <article class="help-card">
+      <header class="help-head">
+        <div>
+          <p class="eyebrow">ИНСТРУКЦИЯ / KAGE SHOW</p>
+          <h1>КАК ИГРАТЬ</h1>
+        </div>
+        <button id="btn-help-close" class="icon-btn icon-btn--close" aria-label="Закрыть">×</button>
+      </header>
+
+      <div class="help-body">
+        <section>
+          <h2>1. Поставьте телефон</h2>
+          <p>Телефон — напротив игровой зоны, на подставке, полке или штативе. Камера должна видеть вас <b>целиком</b>: от макушки до стоп. Лучше всего — горизонтально, на высоте груди, в 2–3 метрах от игрока.</p>
+          <p>Включите свет. Окно за спиной мешает распознаванию. Если вы играете вдвоём, игроки меняются местами перед камерой.</p>
+        </section>
+
+        <section>
+          <h2>2. Что происходит</h2>
+          <p>На вас идёт тень. У неё есть поза: руки в стороны, «звезда», руки на пояс, кулаки к голове и другие. Поза видна в карточке внизу и на самом силуэте.</p>
+          <p>Повторите позу, пока тень приближается. Когда она замирает, у вас есть несколько секунд, чтобы <b>удержать контур</b>. Точность выше порога — тень проходит сквозь вас. Ниже — вы теряете жизнь.</p>
+        </section>
+
+        <section>
+          <h2>3. Точность</h2>
+          <p>Игра сравнивает направления рук, предплечий, бёдер, голеней и наклон корпуса. Цвет скелета подсказывает, что исправить: зелёный — хорошо, жёлтый — почти, красный — мимо. Полоска внизу показывает общую точность и порог.</p>
+          <p>Стоять нужно целиком в кадре: если система перестаёт видеть стопы, таймер ждёт. Это не штраф — просто вернитесь в кадр.</p>
+        </section>
+
+        <section>
+          <h2>4. Дуэль</h2>
+          <p>Первый игрок проходит 5 теней, затем телефон переходит второму. У каждого 3 жизни. Очки зависят от точности и серии успехов, при равенстве очков сравнивается средняя точность.</p>
+        </section>
+
+        <section class="help-note">
+          <h2>Камера и приватность</h2>
+          <p>Видео обрабатывается прямо в браузере телефона и никуда не отправляется. Для распознавания позы один раз загружается модель MediaPipe с CDN — поэтому при первом запуске нужен интернет. Для доступа к камере нужен HTTPS (GitHub Pages подходит) или localhost.</p>
+        </section>
+      </div>
+
+      <footer class="help-footer">
+        <button id="btn-help-close-2" class="btn btn--primary" data-close-help>ПОНЯТНО</button>
+      </footer>
+    </article>
+  </section>
+
+  <!-- ================= ИГРОВОЙ HUD ================= -->
+  <div id="hud" class="hud" hidden>
+    <div class="hud-top">
+      <div class="hud-id">
+        <span id="hud-player">ИГРОК</span>
+        <small id="hud-role">СОЛО</small>
+      </div>
+      <div class="hud-center">
+        <div class="hud-pill"><span id="hud-state">ТЕНЬ</span><b id="hud-round">1 / 5</b></div>
+        <div id="hud-lives" class="lives" aria-label="Жизни"></div>
+        <span id="hud-combo" class="combo" hidden>СЕРИЯ ×1</span>
+      </div>
+      <div class="hud-actions">
+        <button id="btn-hud-sound" class="icon-btn icon-btn--small" data-sound aria-label="Звук"><span class="icon-sound">♪</span></button>
+        <button id="btn-pause" class="icon-btn icon-btn--small" aria-label="Пауза">Ⅱ</button>
+      </div>
+    </div>
+
+    <div class="hud-score"><span id="hud-score">0</span><small>ОЧКИ</small></div>
+
+    <div id="big-state" class="big-state" hidden>ТЕНЬ ИДЁТ</div>
+    <div id="detect-hint" class="detect-hint" hidden>ВАС НЕ ВИДНО</div>
+
+    <div id="prep" class="prep" hidden>
+      <p class="eyebrow">СИГНАЛ / STANDBY</p>
+      <h2 id="prep-title">ВСТАНЬТЕ В КАДР</h2>
+      <div id="prep-count" class="prep-count">3</div>
+      <p id="prep-sub">Нужны голова, руки и стопы целиком</p>
+    </div>
+
+    <div id="verdict" class="verdict" hidden>
+      <div class="verdict-card">
+        <p class="eyebrow">КОНТАКТ</p>
+        <h2 id="verdict-title">ЧИСТО</h2>
+        <div class="verdict-numbers">
+          <b id="verdict-acc">84%</b>
+          <span id="verdict-threshold">порог 67%</span>
+        </div>
+        <strong id="verdict-points">+2 400</strong>
+        <p id="verdict-note">Тень прошла сквозь тебя</p>
+      </div>
+    </div>
+
+    <div id="panel" class="bottom-panel" hidden>
+      <div class="pose-card">
+        <canvas id="pose-mini" width="144" height="192" aria-hidden="true"></canvas>
+        <div class="pose-copy">
+          <span class="pose-kicker">ПОЗА ТЕНИ <b id="pose-diff">●○○</b></span>
+          <strong id="pose-name">СТАТУЯ</strong>
+          <small id="pose-hint">Руки прямо в стороны</small>
+        </div>
+      </div>
+
+      <div class="match-block">
+        <div class="match-head">
+          <span id="hold-label">УДЕРЖИ ПОЗУ</span>
+          <b id="match-val">—</b>
+        </div>
+        <div class="match-track">
+          <i id="match-fill"></i>
+          <span id="pass-mark"></span>
+        </div>
+        <div class="match-foot">
+          <span id="form-tip">Повторите позу и замрите</span>
+          <span id="pass-label">ПОРОГ 65%</span>
+        </div>
+      </div>
+
+      <div id="clock" class="clock">
+        <span id="clock-num">3</span>
+        <small id="clock-sub">до контакта</small>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ПЕРЕДАЧА ХОДА ================= -->
+  <section id="screen-handoff" class="screen screen--handoff" hidden>
+    <div class="handoff-card">
+      <p id="handoff-kicker" class="eyebrow">ХОД 1 / 2 ЗАВЕРШЁН</p>
+      <h1 id="handoff-title">ПЕРЕДАЙ ТЕНЬ</h1>
+      <p id="handoff-sub" class="handoff-sub">Теперь очередь: ИГРОК 2</p>
+
+      <div class="handoff-total">
+        <span>СЧЁТ ИГРОКА 1</span>
+        <strong id="handoff-score">0</strong>
+        <small id="handoff-stats">0 из 5 теней</small>
+      </div>
+
+      <div class="handoff-visual" aria-hidden="true">
+        <span>ИГРОК 1</span>
+        <i></i><i></i><i></i>
+        <span id="handoff-next-name">ИГРОК 2</span>
+      </div>
+
+      <div class="row-actions">
+        <button id="btn-handoff-next" class="btn btn--primary btn--big">Я — ИГРОК 2</button>
+        <button id="btn-handoff-menu" class="btn btn--ghost">В МЕНЮ</button>
+      </div>
+      <p class="micro-note">Встаньте на место игрока 1. Камера останется включённой.</p>
+    </div>
+  </section>
+
+  <!-- ================= РЕЗУЛЬТАТ ================= -->
+  <section id="screen-over" class="screen screen--over" hidden>
+    <div class="result-card">
+      <p class="eyebrow">ФИНАЛ / SHOW DOWN</p>
+      <h1 id="result-title">ТЕНЬ ПРОЙДЕНА</h1>
+      <p id="result-sub" class="result-sub"></p>
+      <div id="result-body" class="result-body"></div>
+      <div class="row-actions">
+        <button id="btn-again" class="btn btn--primary btn--big">ЕЩЁ РАЗ</button>
+        <button id="btn-over-menu" class="btn btn--ghost">В МЕНЮ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ПАУЗА ================= -->
+  <section id="screen-pause" class="screen screen--pause" hidden>
+    <div class="pause-card">
+      <p class="eyebrow">ПАУЗА / HOLD</p>
+      <h1>ТЕНЬ ЖДЁТ</h1>
+      <p>Таймер остановлен. Можно выдохнуть.</p>
+      <div class="row-actions row-actions--stack">
+        <button id="btn-resume" class="btn btn--primary btn--big">ПРОДОЛЖИТЬ</button>
+        <button id="btn-restart" class="btn btn--ghost">НАЧАТЬ ЗАНОВО</button>
+        <button id="btn-pause-menu" class="btn btn--ghost">В МЕНЮ</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

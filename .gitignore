@@ -1,0 +1,8 @@
+# dev screenshots and local secrets
+shots/
+cert.pem
+key.pem
+*.log
+node_modules/
+.DS_Store
+Thumbs.db

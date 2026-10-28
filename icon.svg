@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="СИЛУЭТ">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="30%" r="80%">
+      <stop offset="0" stop-color="#0d1b28"/>
+      <stop offset="1" stop-color="#05070c"/>
+    </radialGradient>
+    <linearGradient id="rim" gradientUnits="userSpaceOnUse" x1="110" y1="75" x2="405" y2="440">
+      <stop offset="0" stop-color="#79f7ff"/>
+      <stop offset="1" stop-color="#ffd166"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#bg)"/>
+  <rect x="18" y="18" width="476" height="476" rx="90" fill="none" stroke="#79f7ff" stroke-opacity=".18"/>
+  <g stroke="#0b1119" stroke-opacity=".75" stroke-width="1">
+    <path d="M64 0v512M128 0v512M192 0v512M256 0v512M320 0v512M384 0v512M448 0v512"/>
+    <path d="M0 64h512M0 128h512M0 192h512M0 256h512M0 320h512M0 384h512M0 448h512"/>
+  </g>
+  <g fill="none" stroke="url(#rim)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)">
+    <circle cx="256" cy="112" r="40" fill="#07101a"/>
+    <path d="M256 162v146"/>
+    <path d="M166 214h180"/>
+    <path d="m256 308-62 126"/>
+    <path d="m256 308 62 126"/>
+  </g>
+  <g fill="#ffd166">
+    <rect x="382" y="70" width="10" height="52" rx="5"/>
+    <rect x="404" y="70" width="6" height="34" rx="3" opacity=".65"/>
+  </g>
+  <text x="42" y="466" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="6" fill="#79f7ff" opacity=".8">СИЛУЭТ</text>
+</svg>
