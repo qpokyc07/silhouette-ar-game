@@ -295,8 +295,8 @@ async function startCamera() {
       audio: false,
       video: {
         facingMode: { ideal: 'user' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
         frameRate: { ideal: 30, max: 30 },
       },
     });
@@ -1331,7 +1331,7 @@ function capturePhoto() {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     state.photos.push({ url, round: state.game ? state.game.roundNumber : state.photos.length + 1 });
-  }, 'image/jpeg', 0.88);
+  }, 'image/jpeg', 0.95);
 }
 
 function photosHtml() {
