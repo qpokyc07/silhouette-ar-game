@@ -1331,7 +1331,7 @@ function capturePhoto() {
     if (!blob) return;
     const url = URL.createObjectURL(blob);
     state.photos.push({ url, round: state.game ? state.game.roundNumber : state.photos.length + 1 });
-  }, 'image/jpeg', 0.95);
+  }, 'image/png');
 }
 
 function photosHtml() {
