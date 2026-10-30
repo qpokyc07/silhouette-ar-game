@@ -16,7 +16,7 @@ import { PoseMatcher } from './matcher.js';
 import { SilhouetteGame, PREP_TIME } from './game.js';
 import { Scene, renderPoseMini } from './scene.js';
 import { Sound } from './audio.js';
-import { loadBoard, qualifies, saveScore } from './leaderboard.js';
+import { loadBoard, saveScore } from './leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const ROUNDS = 5;
@@ -1159,11 +1159,11 @@ function duelRow(p, game, winner) {
 }
 
 function leaderSaveHtml(p, endless) {
-  if (!p.score || !qualifies(p.score)) return '';
+  if (!p.score) return '';
   return `
     <div class="leader-save">
       <div class="leader-save__head">
-        <span>НОВЫЙ РЕЗУЛЬТАТ В ТАБЛИЦЕ ЛИДЕРОВ</span>
+        <span>ЗАПИШИ СВОЙ РЕЗУЛЬТАТ В ОБЩУЮ ТАБЛИЦУ</span>
         <b>${formatScore(p.score)}</b>
       </div>
       <div class="leader-save__row">
@@ -1174,29 +1174,38 @@ function leaderSaveHtml(p, endless) {
     </div>`;
 }
 
-function saveLeaderScore(p, endless) {
+async function saveLeaderScore(p, endless) {
   const input = document.getElementById('leader-name');
   const name = cleanName(input?.value, 'ИГРОК');
   state.leaderName = name;
   savePrefs();
-  const rank = saveScore({
-    name,
-    score: p.score,
-    mode: endless ? 'endless' : 'solo',
-    rounds: p.rounds.length,
-    accuracy: Math.round(p.avgAccuracy * 100),
-  });
   const btn = document.getElementById('btn-leader-save');
-  if (btn) btn.disabled = true;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'СОХРАНЯЮ…';
+  }
   if (input) input.disabled = true;
   const msg = document.getElementById('leader-save-msg');
+  let saved = false;
+  try {
+    saved = await saveScore({
+      name,
+      score: p.score,
+      mode: endless ? 'endless' : 'solo',
+      rounds: p.rounds.length,
+      accuracy: Math.round(p.avgAccuracy * 100),
+    });
+  } catch (_) {
+    saved = false;
+  }
   if (msg) {
     msg.hidden = false;
-    msg.textContent = rank > 0 ? `Сохранено — ты ${rank}-й в таблице` : 'Сохранено';
+    msg.textContent = saved ? 'Сохранено в общую таблицу лидеров' : 'Сохранено локально (нет сети)';
   }
+  if (btn) btn.textContent = 'СОХРАНЕНО';
 }
 
-function showLeaders() {
+async function showLeaders() {
   hidePrimary();
   state.screen = 'leaders';
   state.phase = 'idle';
@@ -1207,7 +1216,8 @@ function showLeaders() {
   openScreen('screen-leaders');
   setHud(false);
   const body = $('leaders-body');
-  const board = loadBoard();
+  body.innerHTML = '<p class="leaders-empty">Загружаю таблицу…</p>';
+  const board = await loadBoard();
   if (!board.length) {
     body.innerHTML = '<p class="leaders-empty">Пока пусто. Сыграйте в «СОЛО» или «БЕСКОНЕЧНЫЙ», чтобы попасть в таблицу.</p>';
   } else {
