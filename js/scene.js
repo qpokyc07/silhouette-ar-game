@@ -227,7 +227,25 @@ export class Scene {
   }
 
   drawGame(ctx, state) {
-    const { videoRect, target, sample } = state;
+    const { videoRect, target, targets, sample } = state;
+
+    if (targets && targets.length) {
+      this.drawRings(ctx);
+      if (state.phase === 'prep') this.drawPrepGuide(ctx, videoRect, sample);
+      if (state.phase !== 'impact') {
+        for (const t of targets) {
+          if (state.phase === 'approach') this.drawSpeed(ctx, t, videoRect);
+          this.drawTarget(ctx, t, state);
+        }
+      }
+      const players = sample?.players || [];
+      for (const ps of players) {
+        if (ps?.points && state.phase !== 'approach') this.drawPlayer(ctx, ps, state);
+      }
+      this.drawParticles(ctx);
+      return;
+    }
+
     if (target?.anchor && state.phase !== 'impact') {
       if (state.phase === 'approach') this.drawSpeed(ctx, target, videoRect);
       this.drawRings(ctx);
@@ -330,8 +348,9 @@ export class Scene {
     const rise = state.phase === 'approach' ? (1 - easeOut(p)) * (state.videoRect?.h || this.h) * 0.18 : 0;
     const locked = state.phase === 'hold';
     const edge = locked ? COLORS.amber : COLORS.cyan;
-    const alpha = state.phase === 'approach' ? 0.4 + p * 0.58 : 0.84;
-    const bodyAlpha = state.phase === 'approach' ? 0.96 + p * 0.04 : 0.42;
+    const fade = locked ? 1 - 0.92 * smoothstep(state.holdFade || 0) : 1;
+    const alpha = (state.phase === 'approach' ? 0.4 + p * 0.58 : 0.84) * fade;
+    const bodyAlpha = (state.phase === 'approach' ? 0.96 + p * 0.04 : 0.42) * fade;
 
     if (state.phase === 'approach') {
       // Призрачные догоняющие копии.
@@ -375,7 +394,7 @@ export class Scene {
 
     if (locked) {
       const box = figureBox(fig, { x: target.anchor.x, groundY: target.anchor.groundY, scale });
-      drawBrackets(ctx, box, COLORS.amber, 0.42);
+      drawBrackets(ctx, box, COLORS.amber, 0.42 * fade);
     }
   }
 
@@ -679,14 +698,7 @@ export function renderPoseMini(canvas, pose) {
   const h = canvas.height;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, w, h);
-  const fig = buildFigure(pose);
-  const pad = Math.min(w, h) * 0.1;
-  const scale = Math.min((w - pad * 2) / fig.bounds.width, (h - pad * 2) / fig.bounds.height);
-  const anchor = {
-    x: w / 2,
-    groundY: h - pad,
-    scale,
-  };
+
   // Лёгкая сетка.
   ctx.save();
   ctx.strokeStyle = 'rgba(121,247,255,0.08)';
@@ -698,7 +710,8 @@ export function renderPoseMini(canvas, pose) {
     ctx.stroke();
   }
   ctx.restore();
-  drawFigure(ctx, fig, anchor, {
+
+  const opts = {
     edge: COLORS.amber,
     fill: 'rgba(3,8,16,0.34)',
     alpha: 0.98,
@@ -706,7 +719,24 @@ export function renderPoseMini(canvas, pose) {
     glow: 14,
     rimAlpha: 0.85,
     wire: true,
-  });
+  };
+
+  if (pose.joint) {
+    const figL = buildFigure(pose.left);
+    const figR = buildFigure(pose.right);
+    const scale = Math.min(
+      (w * 0.46) / Math.max(figL.bounds.width, figR.bounds.width),
+      (h - 12) / Math.max(figL.bounds.height, figR.bounds.height),
+    );
+    drawFigure(ctx, figL, { x: w * 0.27, groundY: h - 8, scale }, opts);
+    drawFigure(ctx, figR, { x: w * 0.73, groundY: h - 8, scale }, opts);
+    return;
+  }
+
+  const fig = buildFigure(pose);
+  const pad = Math.min(w, h) * 0.1;
+  const scale = Math.min((w - pad * 2) / fig.bounds.width, (h - pad * 2) / fig.bounds.height);
+  drawFigure(ctx, fig, { x: w / 2, groundY: h - pad, scale }, opts);
 }
 
 function colorFor(score, lock) {

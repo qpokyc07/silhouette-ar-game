@@ -16,6 +16,7 @@ import {
   deckFor,
   blendPose,
   angleDiff,
+  JOINT_POSES,
 } from '../js/poses.js';
 import { PoseMatcher, IDX } from '../js/matcher.js';
 import { SilhouetteGame, PREP_TIME, IMPACT_TIME } from '../js/game.js';
@@ -234,6 +235,74 @@ test('impact длится фиксированное время', () => {
   assert.equal(game.phase, 'impact');
   step(game, IMPACT_TIME + 0.01, 1, true);
   assert.notEqual(game.phase, 'impact');
+});
+
+console.log('\nНовые режимы');
+
+test('набор поз расширен: 30 одиночных и 10 парных', () => {
+  assert.equal(POSES.length, 30);
+  assert.equal(JOINT_POSES.length, 10);
+  for (const p of JOINT_POSES) {
+    assert.ok(p.joint, p.id);
+    assert.ok(p.left && p.right, p.id);
+    assert.ok(Number.isFinite(p.gap), p.id);
+    assert.ok(Number.isFinite(p.left.torso) && Number.isFinite(p.right.torso), p.id);
+    assert.ok(Number.isFinite(p.pass), p.id);
+  }
+});
+
+const sample2 = (m0, m1, full0 = true, full1 = true) => ({
+  fresh: full0 || full1,
+  fullBody: full0 && full1,
+  visible: full0 || full1,
+  players: [
+    { fresh: full0, fullBody: full0, visible: full0, match: m0 },
+    { fresh: full1, fullBody: full1, visible: full1, match: m1 },
+  ],
+});
+
+test('бесконечный режим не имеет потолка теней', () => {
+  const game = new SilhouetteGame().start('endless', { rng: () => 0.5 });
+  step(game, 75, 1, true);
+  assert.notEqual(game.phase, 'over');
+  assert.ok(game.players[0].rounds.length >= 7, `rounds=${game.players[0].rounds.length}`);
+  assert.equal(game.players[0].lives, 3);
+});
+
+test('бесконечный режим завершается после трёх промахов', () => {
+  const game = new SilhouetteGame().start('endless', { rng: () => 0.5 });
+  let guard = 0;
+  while (game.phase !== 'over' && guard++ < 4000) {
+    const fail = game.phase === 'hold';
+    game.update(0.05, sample(fail ? 0.1 : 1, true));
+  }
+  assert.equal(game.phase, 'over');
+  assert.equal(game.players[0].lives, 0);
+  assert.equal(game.players[0].rounds.length, 3);
+});
+
+test('versus: два игрока одновременно, победитель по очкам', () => {
+  const game = new SilhouetteGame().start('versus', { rounds: 5, names: ['АКА', 'КИРА'], rng: () => 0.2 });
+  let guard = 0;
+  while (game.phase !== 'over' && guard++ < 4000) {
+    const hold = game.phase === 'hold';
+    game.update(0.05, sample2(1, hold ? 0.1 : 1, true, true));
+  }
+  assert.equal(game.phase, 'over');
+  assert.ok(game.players[0].score > game.players[1].score, `p0=${game.players[0].score} p1=${game.players[1].score}`);
+  assert.equal(game.winner, game.players[0]);
+});
+
+test('joint: совместная поза проходит с комбинированной точностью', () => {
+  const game = new SilhouetteGame().start('joint', { rounds: 5, names: ['ДУЭТ'], rng: () => 0.3 });
+  let guard = 0;
+  while (game.phase !== 'over' && guard++ < 4000) {
+    const hold = game.phase === 'hold';
+    game.update(0.05, sample2(hold ? 1 : 1, hold ? 1 : 1, true, true));
+  }
+  assert.equal(game.phase, 'over');
+  assert.equal(game.players[0].passed, 5);
+  assert.ok(game.players[0].score > 0);
 });
 
 console.log(`\nВсе тесты пройдены: ${passed}\n`);

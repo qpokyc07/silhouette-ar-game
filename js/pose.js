@@ -57,7 +57,7 @@ export class PoseEngine {
         this.landmarker = await mod.PoseLandmarker.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate },
           runningMode: 'VIDEO',
-          numPoses: 1,
+          numPoses: 2,
           minPoseDetectionConfidence: 0.42,
           minPosePresenceConfidence: 0.42,
           minTrackingConfidence: 0.42,
@@ -92,8 +92,8 @@ export class PoseEngine {
       const res = this.landmarker.detectForVideo(video, ts);
       this.lastTs = ts;
       this.failures = 0;
-      const lm = res?.landmarks?.[0];
-      return lm && lm.length >= 29 ? lm : null;
+      const lms = (res?.landmarks || []).filter((lm) => lm && lm.length >= 29).slice(0, 2);
+      return lms;
     } catch (_) {
       this.failures++;
       return null;

@@ -1,5 +1,5 @@
 /**
- * Сопоставление живой позы с силуэтом.
+ * Сопоставление живой позы с силуэтом. Поддерживает одного или двух человек.
  *
  * MediaPipe отдаёт нормализованные точки кадра. Камера зеркальная, поэтому
  * x переворачивается: игрок видит себя как в зеркале и сравнивает фигуры
@@ -38,39 +38,30 @@ const JOINTS = [
 ];
 
 const KEY_POINTS = Object.keys(IDX);
-const ALL_KEYS = [...KEY_POINTS, 'shMid', 'hipMid'];
 
-export class PoseMatcher {
+function normDeg(d) {
+  return ((d % 360) + 360) % 360;
+}
+
+class Person {
   constructor() {
-    this.reset();
-  }
-
-  reset() {
     this.smoothed = {};
     this.points = {};
     this.angles = {};
-    this.valid = {};
     this.visible = false;
     this.fullBody = false;
     this.bodyVisible = false;
     this.anchor = null;
+    this.rect = null;
     this.updatedAt = 0;
-    this.frameAt = 0;
+    this.poseId = null;
     this.match = null;
     this.matchSmooth = 0;
-    this.poseId = null;
     this.jointScores = {};
     this.worst = null;
-    this.rect = null;
-    this.debug = false;
   }
 
-  /**
-   * @param {Array|null} landmarks
-   * @param {{x:number,y:number,w:number,h:number}} rect видимая область видео
-   * @param {number} now
-   */
-  update(landmarks, rect, now = performance.now()) {
+  process(landmarks, rect, now) {
     this.rect = rect;
     this.updatedAt = now;
 
@@ -81,7 +72,7 @@ export class PoseMatcher {
       this.anchor = null;
       this.points = {};
       this.angles = {};
-      return this.frame();
+      return;
     }
 
     const raw = {};
@@ -156,7 +147,6 @@ export class PoseMatcher {
 
     this.angles = this.extractAngles();
     this.anchor = this.fullBody ? this.makeAnchor() : null;
-    return this.frame();
   }
 
   extractAngles() {
@@ -185,8 +175,6 @@ export class PoseMatcher {
     const nose = p.nose;
     const shoulderW = Math.abs(p.shR.x - p.shL.x);
     const headTop = nose.y - Math.max(8, shoulderW * 0.17);
-    // Лодыжка MediaPipe выше подошвы: опускаем «пол» на 4–5% роста,
-    // иначе ступни тени висят в воздухе.
     const bodyPx = Math.max(60, ankleY - headTop);
     const groundY = ankleY + Math.max(3, bodyPx * 0.045);
     const height = Math.max(60, groundY - headTop);
@@ -198,31 +186,6 @@ export class PoseMatcher {
     };
   }
 
-  frame() {
-    return {
-      visible: this.visible,
-      fullBody: this.fullBody,
-      bodyVisible: this.bodyVisible,
-      anchor: this.anchor,
-      points: this.points,
-      angles: this.angles,
-      updatedAt: this.updatedAt,
-      rect: this.rect,
-      match: this.match,
-      matchSmooth: this.matchSmooth,
-      jointScores: this.jointScores,
-      worst: this.worst,
-    };
-  }
-
-  isFresh(now = performance.now(), maxAge = 420) {
-    return now - this.updatedAt <= maxAge;
-  }
-
-  /**
-   * @param {object} pose
-   * @returns {{match:number, raw:number, jointScores:object, worst:object|null, valid:boolean}}
-   */
   score(pose) {
     if (!pose) {
       this.match = null;
@@ -256,8 +219,6 @@ export class PoseMatcher {
       if (playerAngle != null && targetAngle != null && a?.valid && b?.valid) {
         const err = Math.abs(angleDiff(playerAngle, targetAngle));
         score = Math.max(0, Math.min(1, 1 - err / j.maxErr));
-        // Плавный «жёсткий край»: почти правильная поза не должна страдать
-        // от дрожания камеры, а грубая ошибка — прощаться.
         score = Math.pow(score, 0.82);
         if (!worst || score < worst.score) worst = { key: j.key, label: j.label, score, err };
       } else {
@@ -279,8 +240,137 @@ export class PoseMatcher {
   }
 }
 
-function normDeg(d) {
-  return ((d % 360) + 360) % 360;
+export class PoseMatcher {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.person = new Person();
+    this.person2 = new Person();
+    this.left = null;
+    this.right = null;
+    this.frameAt = 0;
+    this.debug = false;
+    this._sync();
+  }
+
+  _sync() {
+    const p = this.person;
+    this.smoothed = p.smoothed;
+    this.points = p.points;
+    this.angles = p.angles;
+    this.visible = p.visible;
+    this.fullBody = p.fullBody;
+    this.bodyVisible = p.bodyVisible;
+    this.anchor = p.anchor;
+    this.updatedAt = p.updatedAt;
+    this.rect = p.rect;
+    this.match = p.match;
+    this.matchSmooth = p.matchSmooth;
+    this.poseId = p.poseId;
+    this.jointScores = p.jointScores;
+    this.worst = p.worst;
+  }
+
+  /**
+   * Один человек (соло / дуэль по очереди / бесконечный).
+   */
+  update(landmarks, rect, now = performance.now()) {
+    this.person.process(landmarks, rect, now);
+    this.person2.process(null, rect, now);
+    this.left = this.person.bodyVisible ? this.person : null;
+    this.right = null;
+    this._sync();
+    return this.frame();
+  }
+
+  /**
+   * До двух человек одновременно (versus / совместные позы).
+   * Левым считается тот, у кого центр бедра левее на экране.
+   */
+  updateMulti(sets, rect, now = performance.now()) {
+    const list = Array.isArray(sets) ? sets : [];
+    const a = list[0] && list[0].length >= 29 ? list[0] : null;
+    const b = list[1] && list[1].length >= 29 ? list[1] : null;
+    this.person.process(a, rect, now);
+    this.person2.process(b, rect, now);
+
+    const present = [this.person, this.person2].filter((p) => p.bodyVisible);
+    if (present.length === 2) {
+      const [p0, p1] = present;
+      const x0 = p0.points.hipMid ? p0.points.hipMid.x : 0;
+      const x1 = p1.points.hipMid ? p1.points.hipMid.x : 0;
+      if (x0 <= x1) {
+        this.left = p0;
+        this.right = p1;
+      } else {
+        this.left = p1;
+        this.right = p0;
+      }
+    } else if (present.length === 1) {
+      const p = present[0];
+      const x = p.points.hipMid ? p.points.hipMid.x : rect.x + rect.w / 2;
+      if (x <= rect.x + rect.w / 2) {
+        this.left = p;
+        this.right = null;
+      } else {
+        this.left = null;
+        this.right = p;
+      }
+    } else {
+      this.left = null;
+      this.right = null;
+    }
+    this._sync();
+    return this.frame();
+  }
+
+  frame() {
+    return {
+      visible: this.visible,
+      fullBody: this.fullBody,
+      bodyVisible: this.bodyVisible,
+      anchor: this.anchor,
+      points: this.points,
+      angles: this.angles,
+      updatedAt: this.updatedAt,
+      rect: this.rect,
+      match: this.match,
+      matchSmooth: this.matchSmooth,
+      jointScores: this.jointScores,
+      worst: this.worst,
+    };
+  }
+
+  isFresh(now = performance.now(), maxAge = 420) {
+    return now - this.updatedAt <= maxAge;
+  }
+
+  score(pose) {
+    return this.person.score(pose);
+  }
+
+  scorePerson(side, pose) {
+    const p = side === 'left' ? this.left : side === 'right' ? this.right : null;
+    if (!p) return { match: null, raw: null, jointScores: {}, worst: null, valid: false };
+    return p.score(pose);
+  }
+
+  personFrame(side) {
+    const p = side === 'left' ? this.left : this.right;
+    if (!p) return null;
+    return {
+      visible: p.visible,
+      fullBody: p.fullBody,
+      bodyVisible: p.bodyVisible,
+      anchor: p.anchor,
+      points: p.points,
+      angles: p.angles,
+      updatedAt: p.updatedAt,
+      rect: p.rect,
+    };
+  }
 }
 
 export { IDX };

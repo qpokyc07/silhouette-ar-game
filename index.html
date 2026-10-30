@@ -127,6 +127,7 @@
       <div class="top-actions">
         <button class="icon-btn" data-sound aria-label="Звук" title="Звук"><span class="icon-sound">♪</span><span class="sound-label">ЗВУК</span></button>
         <button class="icon-btn" data-full aria-label="Полный экран" title="Полный экран">⛶</button>
+        <button id="btn-leaders" class="icon-btn" aria-label="Таблица лидеров" title="Таблица лидеров">ТОП</button>
         <button id="btn-help" class="icon-btn" aria-label="Как играть" title="Как играть">?</button>
       </div>
     </header>
@@ -150,8 +151,21 @@
           <span class="mode-cta">НАЧАТЬ <i>→</i></span>
         </button>
 
-        <button id="btn-duel" class="mode-card mode-card--duel">
+        <button id="btn-endless" class="mode-card mode-card--endless">
           <span class="mode-index">02</span>
+          <span class="mode-art" aria-hidden="true">
+            <svg viewBox="0 0 100 160"><circle cx="50" cy="22" r="13"/><path d="M43 36h14l5 48-8 34H46l-8-34z"/><path d="M46 40 30 18l7 8 13 12"/><path d="M54 40l16-22 7 8-13 12"/><path d="m47 118-9 37h12l8-26"/><path d="m53 118 9 37H50l-8-26"/></svg>
+          </span>
+          <span class="mode-copy">
+            <span class="mode-kicker">БЕЗ ЛИМИТА ТЕНЕЙ</span>
+            <strong>БЕСКОНЕЧНЫЙ</strong>
+            <span class="mode-meta">Сколько выдержишь · 3 жизни · рекорд</span>
+          </span>
+          <span class="mode-cta">ДЕРЖАТЬСЯ <i>→</i></span>
+        </button>
+
+        <button id="btn-duel" class="mode-card mode-card--duel">
+          <span class="mode-index">03</span>
           <span class="mode-art mode-art--duo" aria-hidden="true">
             <svg viewBox="0 0 100 160"><circle cx="34" cy="28" r="11"/><path d="M28 40h12l5 42-7 32H30l-7-32z"/><path d="M30 46 10 58l4 8 22-8"/><path d="M40 46l21 12-4 8-22-8"/><path d="m32 114-8 34h10l8-24"/><path d="m38 114 8 34H36l-8-24"/><circle cx="70" cy="35" r="10"/><path d="M64 46h12l4 38-6 28H66l-6-28z"/><path d="m66 51-16 11 3 7 17-7"/><path d="M76 51l15 11-3 7-17-7"/><path d="m68 112-7 30h9l7-22"/><path d="m73 112 7 30h-9l-7-22"/></svg>
           </span>
@@ -161,6 +175,32 @@
             <span class="mode-meta">2 игрока по очереди · по 5 теней</span>
           </span>
           <span class="mode-cta">ВЫЗВАТЬ <i>→</i></span>
+        </button>
+
+        <button id="btn-versus" class="mode-card mode-card--versus">
+          <span class="mode-index">04</span>
+          <span class="mode-art mode-art--duo" aria-hidden="true">
+            <svg viewBox="0 0 100 160"><circle cx="30" cy="26" r="11"/><path d="M24 38h12l5 44-7 34H26l-7-34z"/><path d="M26 45 10 56l4 8 20-8"/><path d="M38 45l18 11-4 8-20-8"/><path d="m28 116-8 34h10l8-24"/><path d="m34 116 8 34H32l-8-24"/><circle cx="72" cy="26" r="11"/><path d="M66 38h12l5 44-7 34H68l-7-34z"/><path d="M68 45 52 56l4 8 20-8"/><path d="M80 45l16 11-4 8-20-8"/><path d="m70 116-8 34h10l8-24"/><path d="m76 116 8 34h-10l-8-24"/></svg>
+          </span>
+          <span class="mode-copy">
+            <span class="mode-kicker">ДВА ИГРОКА · ОДНОВРЕМЕННО</span>
+            <strong>ДУЭЛЬ ×2</strong>
+            <span class="mode-meta">Оба в кадре сразу · одна тень на каждого</span>
+          </span>
+          <span class="mode-cta">СОРЕВНОВАТЬСЯ <i>→</i></span>
+        </button>
+
+        <button id="btn-joint" class="mode-card mode-card--joint">
+          <span class="mode-index">05</span>
+          <span class="mode-art mode-art--duo" aria-hidden="true">
+            <svg viewBox="0 0 100 160"><circle cx="34" cy="28" r="11"/><path d="M28 40h12l5 42-7 32H30l-7-32z"/><path d="M30 46 10 58l4 8 22-8"/><path d="M40 46l21 12-4 8-22-8"/><path d="m32 114-8 34h10l8-24"/><path d="m38 114 8 34H36l-8-24"/><circle cx="70" cy="35" r="10"/><path d="M64 46h12l4 38-6 28H66l-6-28z"/><path d="m66 51-16 11 3 7 17-7"/><path d="M76 51l15 11-3 7-17-7"/><path d="m68 112-7 30h9l7-22"/><path d="m73 112 7 30h-9l-7-22"/></svg>
+          </span>
+          <span class="mode-copy">
+            <span class="mode-kicker">СОВМЕСТНАЯ ПОЗА</span>
+            <strong>ДУЭТ</strong>
+            <span class="mode-meta">Вдвоём собираете одну парную позу</span>
+          </span>
+          <span class="mode-cta">ВМЕСТЕ <i>→</i></span>
         </button>
       </div>
 
@@ -175,8 +215,8 @@
   <section id="screen-duel" class="screen screen--duel" hidden>
     <div class="duel-setup-card">
       <p class="eyebrow">ЛОКАЛЬНАЯ ДУЭЛЬ / 02</p>
-      <h1>КТО БРОСАЕТ<br>ТЕНЬ?</h1>
-      <p class="duel-lead">Игроки проходят одинаковое число теней по очереди. Счёт и точность решают, кто сильнее.</p>
+      <h1 id="duel-title">КТО БРОСАЕТ<br>ТЕНЬ?</h1>
+      <p id="duel-lead" class="duel-lead">Игроки проходят одинаковое число теней по очереди. Счёт и точность решают, кто сильнее.</p>
 
       <div class="name-grid">
         <label class="name-field">
@@ -199,6 +239,19 @@
       <div class="duel-actions">
         <button id="btn-duel-back" class="btn btn--ghost">← НАЗАД</button>
         <button id="btn-duel-start" class="btn btn--primary btn--big">НАЧАТЬ ДУЭЛЬ</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= ЛИДЕРЫ ================= -->
+  <section id="screen-leaders" class="screen screen--leaders" hidden>
+    <div class="leaders-card">
+      <p class="eyebrow">ТАБЛИЦА ЛИДЕРОВ / TOP 10</p>
+      <h1>ЛУЧШИЕ ТЕНИ</h1>
+      <p class="leaders-sub">Лучшие результаты в «СОЛО» и «БЕСКОНЕЧНЫЙ» на этом устройстве.</p>
+      <div id="leaders-body" class="leaders-body"></div>
+      <div class="row-actions">
+        <button id="btn-leaders-back" class="btn btn--primary btn--big">НАЗАД</button>
       </div>
     </div>
   </section>

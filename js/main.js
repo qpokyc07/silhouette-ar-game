@@ -16,11 +16,12 @@ import { PoseMatcher } from './matcher.js';
 import { SilhouetteGame, PREP_TIME } from './game.js';
 import { Scene, renderPoseMini } from './scene.js';
 import { Sound } from './audio.js';
+import { loadBoard, qualifies, saveScore } from './leaderboard.js';
 
 const $ = (id) => document.getElementById(id);
 const ROUNDS = 5;
 const STORE_KEY = 'silhouette:v1';
-const PRIMARY = ['screen-intro', 'screen-menu', 'screen-duel', 'screen-handoff', 'screen-over', 'screen-pause'];
+const PRIMARY = ['screen-intro', 'screen-menu', 'screen-duel', 'screen-leaders', 'screen-handoff', 'screen-over', 'screen-pause'];
 
 const state = {
   screen: 'intro',
@@ -41,8 +42,10 @@ const state = {
   game: null,
   lastMode: 'solo',
   lastNames: ['ИГРОК 1', 'ИГРОК 2'],
+  setupMode: 'duel',
   phase: 'idle',
   target: null,
+  targets: null,
   anchorSmooth: null,
   lastSample: null,
   lastDetect: 0,
@@ -54,6 +57,7 @@ const state = {
   sound: new Sound(),
   soundOn: true,
   bestSolo: 0,
+  leaderName: 'ИГРОК',
   countShown: null,
   helpOpen: false,
   hudCache: {},
@@ -108,6 +112,7 @@ function loadPrefs() {
     const data = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
     if (!data) return;
     if (Number.isFinite(data.bestSolo)) state.bestSolo = data.bestSolo;
+    if (typeof data.name === 'string' && data.name.trim()) state.leaderName = data.name.trim().slice(0, 14);
     if (typeof data.sound === 'boolean') {
       state.soundOn = data.sound;
       state.sound.enabled = data.sound;
@@ -120,7 +125,7 @@ function loadPrefs() {
 
 function savePrefs() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn, name: state.leaderName }));
   } catch (_) {
     /* noop */
   }
@@ -194,7 +199,8 @@ function showMenu() {
   syncSoundUI();
 }
 
-function showDuelSetup() {
+function showDuelSetup(mode = 'duel') {
+  state.setupMode = mode === 'versus' ? 'versus' : 'duel';
   hidePrimary();
   state.screen = 'duel';
   document.body.dataset.mode = 'duel';
@@ -204,6 +210,13 @@ function showDuelSetup() {
   const n2 = $('name2');
   if (n1 && !n1.value) n1.value = 'ИГРОК 1';
   if (n2 && !n2.value) n2.value = 'ИГРОК 2';
+  if (state.setupMode === 'versus') {
+    $('duel-title').innerHTML = 'ДВА ИГРОКА<br>ОДНОВРЕМЕННО';
+    $('duel-lead').textContent = 'Оба в кадре одновременно, одна и та же тень на каждого. Победит тот, кто точнее повторит позу и наберёт больше очков.';
+  } else {
+    $('duel-title').innerHTML = 'КТО БРОСАЕТ<br>ТЕНЬ?';
+    $('duel-lead').textContent = 'Игроки проходят одинаковое число теней по очереди. Счёт и точность решают, кто сильнее.';
+  }
   // На телефоне автофокус открывает клавиатуру поверх игры — не мешаем.
   if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     setTimeout(() => n1?.select(), 180);
@@ -415,12 +428,15 @@ function startGame(mode, names) {
 
   hidePrimary();
   state.screen = 'game';
-  state.mode = mode === 'duel' ? 'duel' : 'solo';
+  state.mode = ['duel', 'endless', 'versus', 'joint'].includes(mode) ? mode : 'solo';
   state.paused = false;
   state.lastMode = state.mode;
-  state.lastNames = state.mode === 'duel' ? [names[0], names[1]] : ['ИГРОК'];
+  state.lastNames = (state.mode === 'duel' || state.mode === 'versus')
+    ? [names[0], names[1]]
+    : [state.leaderName || 'ИГРОК'];
   state.phase = 'prep';
   state.target = null;
+  state.targets = null;
   state.anchorSmooth = null;
   state.lastSample = null;
   state.lastDetect = 0;
@@ -447,6 +463,7 @@ function startGame(mode, names) {
 function enterPrep() {
   state.phase = 'prep';
   state.target = null;
+  state.targets = null;
   state.anchorSmooth = null;
   state.lastSample = null;
   state.countShown = null;
@@ -454,7 +471,8 @@ function enterPrep() {
   $('prep').hidden = false;
   $('prep').classList.remove('waiting');
   $('prep-title').textContent = 'ВСТАНЬТЕ В КАДР';
-  $('prep-sub').textContent = 'Нужны голова, руки и стопы целиком';
+  const multi = state.game && (state.game.mode === 'versus' || state.game.mode === 'joint');
+  $('prep-sub').textContent = multi ? 'Нужны оба игрока целиком: голова, руки и стопы' : 'Нужны голова, руки и стопы целиком';
   $('prep-count').textContent = '3';
   $('verdict').hidden = true;
   $('panel').hidden = true;
@@ -539,7 +557,16 @@ function bindUi() {
     state.sound.ui();
     startGame('solo', ['ИГРОК']);
   });
-  $('btn-duel').addEventListener('click', showDuelSetup);
+  $('btn-endless').addEventListener('click', () => {
+    state.sound.ui();
+    startGame('endless', [state.leaderName || 'ИГРОК']);
+  });
+  $('btn-duel').addEventListener('click', () => showDuelSetup('duel'));
+  $('btn-versus').addEventListener('click', () => showDuelSetup('versus'));
+  $('btn-joint').addEventListener('click', () => {
+    state.sound.ui();
+    startGame('joint', ['ДУЭТ']);
+  });
   $('btn-duel-back').addEventListener('click', () => {
     state.sound.ui();
     showMenu();
@@ -548,7 +575,7 @@ function bindUi() {
     const a = cleanName($('name1')?.value, 'ИГРОК 1');
     const b = cleanName($('name2')?.value, 'ИГРОК 2');
     state.sound.ui();
-    startGame('duel', [a, b]);
+    startGame(state.setupMode === 'versus' ? 'versus' : 'duel', [a, b]);
   });
 
   for (const el of document.querySelectorAll('[data-sound]')) {
@@ -573,6 +600,12 @@ function bindUi() {
     startGame(state.lastMode, state.lastNames);
   });
   $('btn-over-menu').addEventListener('click', () => {
+    state.sound.ui();
+    showMenu();
+  });
+
+  $('btn-leaders').addEventListener('click', showLeaders);
+  $('btn-leaders-back').addEventListener('click', () => {
     state.sound.ui();
     showMenu();
   });
@@ -667,7 +700,9 @@ function loop(now) {
 
   if (state.screen === 'game' && state.game && !state.paused) {
     if (!state.demo) detectPose(now);
-    const sample = state.demo ? makeDemoSample(now, dt) : makeSample(now);
+    const sample = state.demo
+      ? (state.game.mode === 'versus' || state.game.mode === 'joint' ? makeDemoMultiSample(now, dt) : makeDemoSample(now, dt))
+      : makeSample(now);
     state.lastSample = sample;
     smoothAnchor(sample);
     state.game.update(dt, sample);
@@ -690,19 +725,26 @@ function detectPose(now) {
   const interval = 45;
   if (now - state.lastDetect < interval) return;
   state.lastDetect = now;
-  const lm = state.engine.detect(state.video, now);
-  if (lm) {
-    state.landmarks = lm;
-    state.matcher.update(lm, state.videoRect, now);
+  const lms = state.engine.detect(state.video, now) || [];
+  state.landmarks = lms.length ? lms : null;
+  const multi = state.game && (state.game.mode === 'versus' || state.game.mode === 'joint');
+  if (multi) {
+    state.matcher.updateMulti(lms, state.videoRect, now);
+  } else if (lms.length) {
+    state.matcher.update(lms[0], state.videoRect, now);
   }
 }
 
 function makeSample(now) {
+  const game = state.game;
+  if (game && (game.mode === 'versus' || game.mode === 'joint')) {
+    return makeMultiSample(now, game);
+  }
   const fresh = state.matcher.isFresh(now, 430);
   const base = state.matcher.frame();
   let scored = { match: null, jointScores: {}, worst: null, valid: false };
-  if (fresh && state.game?.pose && (state.game.phase === 'approach' || state.game.phase === 'hold')) {
-    scored = state.matcher.score(state.game.pose);
+  if (fresh && game?.pose && (game.phase === 'approach' || game.phase === 'hold')) {
+    scored = state.matcher.score(game.pose);
   }
   return {
     visible: !!(fresh && base.visible),
@@ -717,6 +759,50 @@ function makeSample(now) {
     jointScores: scored.jointScores,
     worst: scored.worst,
     updatedAt: base.updatedAt,
+  };
+}
+
+function makeMultiSample(now, game) {
+  const players = ['left', 'right'].map((side) => {
+    const pf = state.matcher.personFrame(side);
+    const fresh = !!pf && now - pf.updatedAt <= 430;
+    const pose = game.pose;
+    const scoring = pose && (game.phase === 'approach' || game.phase === 'hold');
+    let scored = { match: null, raw: null, jointScores: {}, worst: null, valid: false };
+    if (fresh && scoring) {
+      const targetPose = game.mode === 'joint'
+        ? { ...(side === 'left' ? pose.left : pose.right), id: `${pose.id}:${side}` }
+        : pose;
+      if (targetPose) scored = state.matcher.scorePerson(side, targetPose);
+    }
+    return {
+      side,
+      fresh,
+      visible: !!(fresh && pf.visible),
+      fullBody: !!(fresh && pf.fullBody),
+      bodyVisible: !!(fresh && pf.bodyVisible),
+      anchor: fresh ? pf.anchor : null,
+      points: fresh ? pf.points : {},
+      angles: pf ? pf.angles : {},
+      match: scored.match,
+      rawMatch: scored.raw,
+      jointScores: scored.jointScores,
+      worst: scored.worst,
+      updatedAt: pf ? pf.updatedAt : 0,
+    };
+  });
+  const matches = players.map((p) => p.match).filter((m) => typeof m === 'number' && Number.isFinite(m));
+  const match = matches.length ? matches.reduce((a, b) => a + b, 0) / matches.length : null;
+  return {
+    fresh: players.some((p) => p.fresh),
+    visible: players.some((p) => p.visible),
+    fullBody: players.every((p) => p.fullBody),
+    bodyVisible: players.some((p) => p.bodyVisible),
+    players,
+    match,
+    jointScores: {},
+    worst: null,
+    updatedAt: now,
   };
 }
 
@@ -738,7 +824,21 @@ function smoothAnchor(sample) {
 }
 
 function updateTargetProgress() {
-  if (!state.game || !state.target) return;
+  if (!state.game) return;
+  if (state.targets) {
+    if (state.game.phase === 'approach') {
+      const p = Math.max(0, Math.min(1, state.game.phaseTime / state.game.durations.approach));
+      state.targets.forEach((t, i) => {
+        t.progress = p;
+        const a = state.lastSample?.players?.[i]?.anchor;
+        if (a) t.anchor = { ...a };
+      });
+    } else if (state.game.phase === 'hold') {
+      state.targets.forEach((t) => { t.progress = 1; });
+    }
+    return;
+  }
+  if (!state.target) return;
   if (state.game.phase === 'approach') {
     state.target.progress = Math.max(0, Math.min(1, state.game.phaseTime / state.game.durations.approach));
     if (state.anchorSmooth) state.target.anchor = { ...state.anchorSmooth };
@@ -757,12 +857,17 @@ function sceneState() {
   if (state.screen === 'intro') mode = 'intro';
   else if (state.screen === 'game' || state.screen === 'pause') mode = 'game';
   else if (state.screen === 'over') mode = 'over';
+  const holdFade = state.game && state.phase === 'hold'
+    ? Math.max(0, Math.min(1, state.game.phaseTime / 0.9))
+    : 0;
   return {
     mode,
     phase: state.phase,
     videoRect: state.videoRect,
     target: state.target,
+    targets: state.targets,
     sample: state.lastSample,
+    holdFade,
   };
 }
 
@@ -786,8 +891,23 @@ function processGameEvents() {
     }
     if (ev.type === 'round') {
       state.phase = 'approach';
-      const anchor = state.anchorSmooth ? { ...state.anchorSmooth } : fallbackAnchor();
-      state.target = { pose: ev.pose, anchor, progress: 0 };
+      const multi = state.game.mode === 'versus' || state.game.mode === 'joint';
+      if (multi) {
+        const specFor = (side) => ev.pose.joint
+          ? { ...(side === 'left' ? ev.pose.left : ev.pose.right), id: `${ev.pose.id}:${side}`, name: ev.pose.name, hint: ev.pose.hint, diff: ev.pose.diff, pass: ev.pose.pass }
+          : ev.pose;
+        state.targets = ['left', 'right'].map((side, i) => ({
+          pose: specFor(side),
+          anchor: state.lastSample?.players?.[i]?.anchor || fallbackAnchor(),
+          progress: 0,
+          side,
+        }));
+        state.target = null;
+      } else {
+        const anchor = state.anchorSmooth ? { ...state.anchorSmooth } : fallbackAnchor();
+        state.target = { pose: ev.pose, anchor, progress: 0 };
+        state.targets = null;
+      }
       $('prep').hidden = true;
       $('verdict').hidden = true;
       $('panel').hidden = false;
@@ -803,7 +923,13 @@ function processGameEvents() {
     }
     if (ev.type === 'lock') {
       state.phase = 'hold';
-      if (state.target) {
+      if (state.targets) {
+        state.targets.forEach((t, i) => {
+          t.progress = 1;
+          const a = state.lastSample?.players?.[i]?.anchor;
+          if (a) t.anchor = { ...a };
+        });
+      } else if (state.target) {
         state.target.progress = 1;
         if (state.anchorSmooth) state.target.anchor = { ...state.anchorSmooth };
       }
@@ -841,7 +967,11 @@ function fallbackAnchor() {
 }
 
 function onImpact(ev) {
-  const anchor = state.target?.anchor || fallbackAnchor();
+  if (ev.versus) {
+    onImpactVersus(ev);
+    return;
+  }
+  const anchor = state.target?.anchor || state.targets?.[0]?.anchor || fallbackAnchor();
   const cx = anchor.x;
   const cy = anchor.groundY - Math.min(anchor.bodyHeight * 0.5, state.h * 0.35);
   state.scene.impact(cx, cy, ev.passed);
@@ -862,6 +992,34 @@ function onImpact(ev) {
   $('panel').hidden = true;
   $('big-state').hidden = true;
   if (ev.passed) {
+    state.scene.flash = 0.32;
+    state.scene.flashColor = '150,255,220';
+  }
+  bump(verdict, 1.04);
+}
+
+function onImpactVersus(ev) {
+  const results = ev.results || [];
+  const anyPass = results.some((r) => r.passed);
+  const allPass = results.every((r) => r.passed);
+  const anchor = state.targets?.[0]?.anchor || fallbackAnchor();
+  const cx = anchor.x;
+  const cy = anchor.groundY - Math.min(anchor.bodyHeight * 0.5, state.h * 0.35);
+  state.scene.impact(cx, cy, anyPass);
+  state.sound.impact(anyPass);
+
+  const verdict = $('verdict');
+  verdict.hidden = false;
+  verdict.classList.remove('is-pass', 'is-fail');
+  verdict.classList.add(anyPass ? 'is-pass' : 'is-fail');
+  $('verdict-title').textContent = allPass ? 'ОБА ЧИСТО' : anyPass ? 'ЧИСТО И ЗАДЕТО' : 'ОБА ЗАДЕТО';
+  $('verdict-acc').textContent = results.map((r) => `${Math.round(r.accuracy * 100)}%`).join(' · ');
+  $('verdict-threshold').textContent = `порог ${Math.round(ev.pose.pass * 100)}%`;
+  $('verdict-points').textContent = results.map((r) => (r.passed ? `+${formatScore(r.points)}` : '−1')).join(' / ');
+  $('verdict-note').textContent = results.map((r) => `${r.name}: ${r.passed ? 'чисто' : 'задето'}`).join(' · ');
+  $('panel').hidden = true;
+  $('big-state').hidden = true;
+  if (anyPass) {
     state.scene.flash = 0.32;
     state.scene.flashColor = '150,255,220';
   }
@@ -914,8 +1072,9 @@ function showResults(game) {
   const body = $('result-body');
   const again = $('btn-again');
 
-  if (game.mode === 'solo') {
+  if (game.mode === 'solo' || game.mode === 'endless') {
     const p = game.players[0];
+    const endless = game.mode === 'endless';
     const isRecord = p.score > state.bestSolo;
     if (isRecord) state.bestSolo = p.score;
     savePrefs();
@@ -923,7 +1082,10 @@ function showResults(game) {
     const avg = Math.round(p.avgAccuracy * 100);
     const rank = avg >= 85 ? 'МАСТЕР ТЕНИ' : avg >= 72 ? 'ТЕНЕВОЙ АКТЁР' : avg >= 58 ? 'УЧЕНИК ТЕНИ' : 'ГОСТЬ СЦЕНЫ';
     title.textContent = p.lives <= 0 ? 'ТЕНЬ ОКАЗАЛАСЬ БЫСТРЕЕ' : 'ТЕНЬ ПРОЙДЕНА';
-    sub.textContent = `${p.passed} из ${game.roundsTotal} теней · средняя точность ${avg}%${isRecord ? ' · новый рекорд' : ''}`;
+    const passedTxt = endless ? `${p.rounds.length}` : `${p.passed}/${game.roundsTotal}`;
+    sub.textContent = endless
+      ? `${p.rounds.length} теней · средняя точность ${avg}%${isRecord ? ' · новый рекорд' : ''}`
+      : `${p.passed} из ${game.roundsTotal} теней · средняя точность ${avg}%${isRecord ? ' · новый рекорд' : ''}`;
     body.innerHTML = `
       <div class="score-plaque">
         <span class="score-plaque__label">ИТОГОВЫЙ СЧЁТ</span>
@@ -931,10 +1093,33 @@ function showResults(game) {
         <span class="score-plaque__rank">${rank}</span>
       </div>
       <div class="result-grid">
-        <div><b>${p.passed}/${game.roundsTotal}</b><span>теней пройдено</span></div>
+        <div><b>${passedTxt}</b><span>теней пройдено</span></div>
         <div><b>${avg}%</b><span>точность</span></div>
         <div><b>${p.bestCombo}</b><span>лучшая серия</span></div>
         <div><b>${formatScore(state.bestSolo)}</b><span>рекорд</span></div>
+      </div>
+      ${leaderSaveHtml(p, endless)}`;
+    const saveBtn = document.getElementById('btn-leader-save');
+    if (saveBtn) saveBtn.addEventListener('click', () => saveLeaderScore(p, endless));
+    again.textContent = 'ЕЩЁ РАЗ';
+    if (p.lives <= 0) state.sound.lose();
+    else state.sound.win();
+  } else if (game.mode === 'joint') {
+    const p = game.players[0];
+    const avg = Math.round(p.avgAccuracy * 100);
+    title.textContent = p.lives <= 0 ? 'ТЕНЬ ОКАЗАЛАСЬ БЫСТРЕЕ' : 'ТЕНЬ ПРОЙДЕНА';
+    sub.textContent = `${p.passed} из ${game.roundsTotal} совместных поз · точность ${avg}%`;
+    body.innerHTML = `
+      <div class="score-plaque">
+        <span class="score-plaque__label">СОВМЕСТНЫЙ СЧЁТ</span>
+        <strong class="score-plaque__value">${formatScore(p.score)}</strong>
+        <span class="score-plaque__rank">ДУЭТ</span>
+      </div>
+      <div class="result-grid">
+        <div><b>${p.passed}/${game.roundsTotal}</b><span>поз пройдено</span></div>
+        <div><b>${avg}%</b><span>точность</span></div>
+        <div><b>${p.bestCombo}</b><span>лучшая серия</span></div>
+        <div><b>${p.lives}</b><span>жизней</span></div>
       </div>`;
     again.textContent = 'ЕЩЁ РАЗ';
     if (p.lives <= 0) state.sound.lose();
@@ -973,6 +1158,72 @@ function duelRow(p, game, winner) {
     </div>`;
 }
 
+function leaderSaveHtml(p, endless) {
+  if (!p.score || !qualifies(p.score)) return '';
+  return `
+    <div class="leader-save">
+      <div class="leader-save__head">
+        <span>НОВЫЙ РЕЗУЛЬТАТ В ТАБЛИЦЕ ЛИДЕРОВ</span>
+        <b>${formatScore(p.score)}</b>
+      </div>
+      <div class="leader-save__row">
+        <input id="leader-name" maxlength="14" value="${escapeHtml(state.leaderName)}" autocomplete="off" spellcheck="false" />
+        <button id="btn-leader-save" class="btn btn--primary">СОХРАНИТЬ</button>
+      </div>
+      <p id="leader-save-msg" class="micro-note" hidden></p>
+    </div>`;
+}
+
+function saveLeaderScore(p, endless) {
+  const input = document.getElementById('leader-name');
+  const name = cleanName(input?.value, 'ИГРОК');
+  state.leaderName = name;
+  savePrefs();
+  const rank = saveScore({
+    name,
+    score: p.score,
+    mode: endless ? 'endless' : 'solo',
+    rounds: p.rounds.length,
+    accuracy: Math.round(p.avgAccuracy * 100),
+  });
+  const btn = document.getElementById('btn-leader-save');
+  if (btn) btn.disabled = true;
+  if (input) input.disabled = true;
+  const msg = document.getElementById('leader-save-msg');
+  if (msg) {
+    msg.hidden = false;
+    msg.textContent = rank > 0 ? `Сохранено — ты ${rank}-й в таблице` : 'Сохранено';
+  }
+}
+
+function showLeaders() {
+  hidePrimary();
+  state.screen = 'leaders';
+  state.phase = 'idle';
+  state.game = null;
+  state.target = null;
+  state.paused = false;
+  document.body.dataset.mode = 'leaders';
+  openScreen('screen-leaders');
+  setHud(false);
+  const body = $('leaders-body');
+  const board = loadBoard();
+  if (!board.length) {
+    body.innerHTML = '<p class="leaders-empty">Пока пусто. Сыграйте в «СОЛО» или «БЕСКОНЕЧНЫЙ», чтобы попасть в таблицу.</p>';
+  } else {
+    body.innerHTML = board.map((e, i) => `
+      <div class="leader-row${i === 0 ? ' is-top' : ''}">
+        <span class="leader-rank">${i + 1}</span>
+        <div class="leader-main">
+          <span class="leader-name">${escapeHtml(e.name)}</span>
+          <span class="leader-meta">${e.mode === 'endless' ? 'БЕСКОНЕЧНЫЙ' : 'СОЛО'} · ${e.rounds} теней · ${e.accuracy}%</span>
+        </div>
+        <b class="leader-score">${formatScore(e.score)}</b>
+      </div>`).join('');
+  }
+  state.sound.ui();
+}
+
 /* ------------------------------------------------------------------ */
 /*  HUD                                                               */
 /* ------------------------------------------------------------------ */
@@ -985,22 +1236,34 @@ function updateHud(force) {
   const sample = state.lastSample || {};
   const cache = state.hudCache;
 
-  setText('hud-player', p.name);
-  setText('hud-role', game.mode === 'duel' ? `ДУЭЛЬ · ХОД ${game.activePlayer + 1}/2` : 'СОЛО');
-  setText('hud-score', formatScore(p.score));
-  setText('hud-round', `${game.roundNumber} / ${game.roundsTotal}`);
-
-  const combo = $('hud-combo');
-  if (p.combo > 0) {
-    combo.hidden = false;
-    setText('hud-combo', `СЕРИЯ ×${p.combo}`);
+  if (game.mode === 'versus') {
+    const [a, b] = game.players;
+    setText('hud-player', `${a.name} · ${b.name}`);
+    setText('hud-role', 'ДУЭЛЬ ×2');
+    setText('hud-score', `${formatScore(a.score)} : ${formatScore(b.score)}`);
+    setText('hud-round', `${game.roundNumber} / ${game.roundsTotal}`);
+    const lives = (q) => '◆'.repeat(q.lives) + '◇'.repeat(Math.max(0, 3 - q.lives));
+    $('hud-lives').innerHTML = `<span class="lives-pair">${lives(a)}</span><span class="lives-pair">${lives(b)}</span>`;
+    $('hud-combo').hidden = true;
   } else {
-    combo.hidden = true;
-  }
+    const role = game.mode === 'duel' ? `ДУЭЛЬ · ХОД ${game.activePlayer + 1}/2` : game.mode === 'endless' ? 'БЕСКОНЕЧНЫЙ' : game.mode === 'joint' ? 'СОВМЕСТНО' : 'СОЛО';
+    setText('hud-player', p.name);
+    setText('hud-role', role);
+    setText('hud-score', formatScore(p.score));
+    setText('hud-round', game.mode === 'endless' ? `${game.roundNumber}` : `${game.roundNumber} / ${game.roundsTotal}`);
 
-  if (cache.livesKey !== `${p.lives}:${p.name}`) {
-    cache.livesKey = `${p.lives}:${p.name}`;
-    $('hud-lives').innerHTML = Array.from({ length: 3 }, (_, i) => `<i class="life ${i < p.lives ? 'is-on' : ''}"></i>`).join('');
+    const combo = $('hud-combo');
+    if (p.combo > 0) {
+      combo.hidden = false;
+      setText('hud-combo', `СЕРИЯ ×${p.combo}`);
+    } else {
+      combo.hidden = true;
+    }
+
+    if (cache.livesKey !== `${p.lives}:${p.name}`) {
+      cache.livesKey = `${p.lives}:${p.name}`;
+      $('hud-lives').innerHTML = Array.from({ length: 3 }, (_, i) => `<i class="life ${i < p.lives ? 'is-on' : ''}"></i>`).join('');
+    }
   }
 
   const phase = game.phase;
@@ -1191,6 +1454,57 @@ function makeDemoSample(now, dt) {
     rawMatch: match,
     jointScores: scores,
     worst: hold ? { key: 'torso', label: 'КОРПУС', score: 0.88, err: 5 } : null,
+    updatedAt: now,
+  };
+}
+
+function makeDemoMultiSample(now, dt) {
+  state.demoTime += dt;
+  const game = state.game;
+  const pose = game?.pose && game.phase !== 'prep' && game.phase !== 'over' ? game.pose : null;
+  const r = state.videoRect;
+  const hold = game && (game.phase === 'hold' || game.phase === 'impact');
+
+  const players = ['left', 'right'].map((side) => {
+    const spec = game?.mode === 'joint' && pose?.joint
+      ? (side === 'left' ? pose.left : pose.right)
+      : (pose || NEUTRAL_POSE);
+    const scale = Math.min((r.h * 0.5) / MODEL_HEIGHT, (r.w * 0.4) / MODEL_HEIGHT);
+    const anchor = {
+      x: side === 'left' ? r.x + r.w * 0.3 : r.x + r.w * 0.7,
+      groundY: r.y + r.h * 0.79,
+      scale,
+      bodyHeight: scale * MODEL_HEIGHT,
+    };
+    const fig = buildFigure(spec);
+    const point = (name) => {
+      const q = fig.points[name];
+      return { x: anchor.x + (q.x - fig.pivotX) * anchor.scale, y: anchor.groundY + (q.y - fig.bottom) * anchor.scale, valid: true, vis: 1 };
+    };
+    const map = { nose: 'head', shL: 'shoulderL', shR: 'shoulderR', elL: 'elbowL', elR: 'elbowR', wrL: 'wristL', wrR: 'wristR', hipL: 'hipL', hipR: 'hipR', kneeL: 'kneeL', kneeR: 'kneeR', ankL: 'ankleL', ankR: 'ankleR' };
+    const pts = {};
+    for (const key of Object.keys(map)) pts[key] = point(map[key]);
+    const mid = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, valid: true, vis: 1 });
+    pts.shMid = mid(pts.shL, pts.shR);
+    pts.hipMid = mid(pts.hipL, pts.hipR);
+    pts.nose.y -= anchor.scale * 0.08;
+    const match = hold ? 0.92 : null;
+    const scores = {};
+    if (hold) {
+      for (const k of ['armLUp', 'armRUp', 'armLFore', 'armRFore', 'legLUp', 'legRUp', 'legLFore', 'legRFore', 'torso']) scores[k] = 0.9;
+    }
+    return { side, fresh: true, visible: true, fullBody: true, bodyVisible: true, anchor, points: pts, angles: {}, match, rawMatch: match, jointScores: scores, worst: null, updatedAt: now };
+  });
+
+  return {
+    fresh: true,
+    visible: true,
+    fullBody: true,
+    bodyVisible: true,
+    players,
+    match: hold ? 0.92 : null,
+    jointScores: {},
+    worst: null,
     updatedAt: now,
   };
 }
