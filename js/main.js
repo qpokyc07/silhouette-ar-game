@@ -58,6 +58,7 @@ const state = {
   scene: new Scene(),
   sound: new Sound(),
   soundOn: true,
+  photosEnabled: true,
   bestSolo: 0,
   leaderName: 'ИГРОК',
   countShown: null,
@@ -121,15 +122,17 @@ function loadPrefs() {
       state.soundOn = data.sound;
       state.sound.enabled = data.sound;
     }
+    if (typeof data.photos === 'boolean') state.photosEnabled = data.photos;
   } catch (_) {
     /* noop */
   }
   syncSoundUI();
+  syncPhotosUI();
 }
 
 function savePrefs() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn, name: state.leaderName }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn, name: state.leaderName, photos: state.photosEnabled }));
   } catch (_) {
     /* noop */
   }
@@ -586,6 +589,9 @@ function bindUi() {
   for (const el of document.querySelectorAll('[data-sound]')) {
     el.addEventListener('click', toggleSound);
   }
+  for (const el of document.querySelectorAll('[data-photos]')) {
+    el.addEventListener('click', togglePhotos);
+  }
   for (const el of document.querySelectorAll('[data-full]')) {
     el.addEventListener('click', toggleFullscreen);
   }
@@ -656,6 +662,22 @@ function syncSoundUI() {
     el.setAttribute('aria-pressed', String(state.soundOn));
     const label = el.querySelector('.sound-label');
     if (label) label.textContent = state.soundOn ? 'ЗВУК' : 'БЕЗ ЗВУКА';
+  }
+}
+
+function togglePhotos() {
+  state.photosEnabled = !state.photosEnabled;
+  state.sound.ui();
+  savePrefs();
+  syncPhotosUI();
+}
+
+function syncPhotosUI() {
+  for (const el of document.querySelectorAll('[data-photos]')) {
+    el.classList.toggle('is-off', !state.photosEnabled);
+    el.setAttribute('aria-pressed', String(state.photosEnabled));
+    const label = el.querySelector('.photo-label');
+    if (label) label.textContent = state.photosEnabled ? 'ФОТО' : 'БЕЗ ФОТО';
   }
 }
 
@@ -1318,6 +1340,7 @@ function updateChallengeBanner() {
 }
 
 function capturePhoto() {
+  if (!state.photosEnabled) return;
   const v = state.video;
   if (!v || v.readyState < 2 || !v.videoWidth) return;
   const canvas = document.createElement('canvas');
