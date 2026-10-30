@@ -17,7 +17,7 @@
   --amber: #ffd166;
   --amber-2: #f5a623;
   --red: #ff5c7a;
-  --mint: #a6ffbb;
+  --lime: #bfff3c;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-l: env(safe-area-inset-left, 0px);
@@ -271,9 +271,12 @@ p {
   gap: 9px;
   min-height: 48px;
   padding: 13px 22px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.045);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 10px 30px rgba(0, 0, 0, 0.28);
   color: var(--paper);
   font-family: var(--font-ui);
   font-size: 12px;
@@ -304,10 +307,12 @@ input:focus-visible {
 }
 
 .btn--primary {
-  border-color: rgba(255, 226, 160, 0.74);
-  background: linear-gradient(145deg, #ffe49e, var(--amber) 55%, #f0a927);
+  border-color: rgba(255, 240, 190, 0.85);
+  background: linear-gradient(145deg, #fff2bd, #ffd76a 45%, #f5b62e 90%);
   color: #141008;
-  box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.2), 0 12px 30px rgba(255, 190, 65, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 12px 34px rgba(255, 190, 65, 0.28), 0 0 0 1px rgba(255, 209, 102, 0.25);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .btn--primary:hover {
@@ -350,9 +355,10 @@ input:focus-visible {
   min-height: 40px;
   justify-content: center;
   padding: 8px 12px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 2px;
-  background: rgba(5, 9, 16, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 8px 22px rgba(0, 0, 0, 0.25);
   color: var(--paper);
   font-size: 11px;
   font-weight: 800;
@@ -823,10 +829,13 @@ input:focus-visible {
   overflow: hidden;
   text-align: left;
   color: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(110% 100% at 100% 0%, rgba(121, 247, 255, 0.09), transparent 55%),
-    linear-gradient(140deg, rgba(12, 20, 33, 0.88), rgba(5, 9, 16, 0.82));
+    radial-gradient(110% 100% at 100% 0%, rgba(121, 247, 255, 0.1), transparent 55%),
+    linear-gradient(140deg, rgba(18, 28, 44, 0.72), rgba(8, 12, 20, 0.66));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 16px 40px rgba(0, 0, 0, 0.3);
   cursor: pointer;
   clip-path: polygon(0 0, calc(100% - 24px) 0, 100% 24px, 100% 100%, 24px 100%, 0 calc(100% - 24px));
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s ease, background 0.3s ease;
@@ -1017,11 +1026,13 @@ input:focus-visible {
   width: min(720px, 100%);
   margin: auto;
   padding: clamp(26px, 5vw, 52px);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(100% 100% at 100% 0%, rgba(255, 209, 102, 0.08), transparent 50%),
-    rgba(7, 12, 21, 0.9);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+    radial-gradient(100% 100% at 100% 0%, rgba(255, 209, 102, 0.1), transparent 50%),
+    rgba(10, 15, 26, 0.66);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 90px rgba(0, 0, 0, 0.5);
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
 }
 
@@ -1542,7 +1553,7 @@ input:focus-visible {
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.56), 0 0 60px rgba(166, 255, 187, 0.14);
 }
 
-.verdict.is-pass h2 { color: var(--mint); }
+.verdict.is-pass h2 { color: var(--lime); }
 .verdict.is-fail .verdict-card { border-color: rgba(255, 92, 122, 0.55); }
 .verdict.is-fail h2 { color: var(--red); }
 
@@ -1663,7 +1674,7 @@ input:focus-visible {
   display: block;
   width: 0;
   height: 100%;
-  background: linear-gradient(90deg, rgba(255, 209, 102, 0.7), var(--amber), var(--mint));
+  background: linear-gradient(90deg, rgba(255, 209, 102, 0.7), var(--amber), var(--lime));
   box-shadow: 0 0 18px rgba(255, 209, 102, 0.4);
   transition: width 0.12s linear, background 0.2s ease;
 }
@@ -1697,8 +1708,8 @@ input:focus-visible {
   letter-spacing: 0.08em;
 }
 
-.bottom-panel[data-tone="pass"] .match-head b { color: var(--mint); }
-.bottom-panel[data-tone="pass"] .match-track i { background: linear-gradient(90deg, var(--amber), var(--mint)); }
+.bottom-panel[data-tone="pass"] .match-head b { color: var(--lime); }
+.bottom-panel[data-tone="pass"] .match-track i { background: linear-gradient(90deg, var(--amber), var(--lime)); }
 .bottom-panel[data-tone="warn"] .match-head b { color: var(--amber); }
 .bottom-panel[data-tone="fail"] .match-head b { color: var(--red); }
 .bottom-panel[data-tone="fail"] .match-track i { background: linear-gradient(90deg, var(--amber-2), var(--red)); }
@@ -1756,11 +1767,13 @@ input:focus-visible {
   width: min(760px, 100%);
   margin: auto;
   padding: clamp(26px, 5vw, 52px);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(100% 100% at 50% 0%, rgba(121, 247, 255, 0.06), transparent 55%),
-    rgba(7, 12, 21, 0.92);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+    radial-gradient(100% 100% at 50% 0%, rgba(255, 209, 102, 0.08), transparent 55%),
+    rgba(10, 15, 26, 0.66);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 100px rgba(0, 0, 0, 0.55);
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
 }
 
@@ -2720,7 +2733,7 @@ input:focus-visible {
 
 .mode-card--endless .mode-cta,
 .mode-card--endless .mode-kicker {
-  color: var(--mint);
+  color: var(--lime);
 }
 
 .screen--leaders {
@@ -2735,11 +2748,13 @@ input:focus-visible {
   width: min(760px, 100%);
   margin: auto;
   padding: clamp(26px, 5vw, 52px);
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   background:
-    radial-gradient(100% 100% at 50% 0%, rgba(121, 247, 255, 0.06), transparent 55%),
-    rgba(7, 12, 21, 0.92);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.6);
+    radial-gradient(100% 100% at 50% 0%, rgba(255, 209, 102, 0.08), transparent 55%),
+    rgba(10, 15, 26, 0.66);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 100px rgba(0, 0, 0, 0.55);
   clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
   text-align: center;
 }
@@ -2897,7 +2912,7 @@ input:focus-visible {
 
 .leader-save .micro-note {
   margin: 12px 0 0;
-  color: var(--mint);
+  color: var(--lime);
 }
 
 /* ------------------------- режимы versus / joint ------------------------- */
@@ -2943,4 +2958,51 @@ input:focus-visible {
 .intro-footer .contact-line {
   margin: 0;
   align-self: center;
+}
+
+/* ------------------------- вызов другу ------------------------- */
+
+.challenge-banner {
+  position: fixed;
+  top: calc(12px + var(--safe-t));
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(640px, calc(100% - 24px));
+  padding: 10px 12px 10px 16px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(255, 209, 102, 0.14), rgba(20, 14, 4, 0.72));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.35), 0 0 24px rgba(255, 209, 102, 0.12);
+  color: var(--paper);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.challenge-banner span {
+  flex: 1;
+}
+
+.challenge-block {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border: 1px solid rgba(191, 255, 60, 0.28);
+  background: rgba(191, 255, 60, 0.05);
+  text-align: center;
+}
+
+.challenge-beat {
+  margin: 0 0 10px;
+  color: var(--lime);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.challenge-block .btn {
+  width: 100%;
 }

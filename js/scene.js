@@ -18,7 +18,7 @@ const COLORS = {
   cyanSoft: 'rgba(121,247,255,0.55)',
   amber: '#ffd166',
   amberSoft: 'rgba(255,209,102,0.55)',
-  mint: '#a6ffbb',
+  mint: '#bfff3c',
   red: '#ff5c7a',
   ink: 'rgba(3,7,14,0.97)',
 };

@@ -43,6 +43,7 @@ const state = {
   lastMode: 'solo',
   lastNames: ['ИГРОК 1', 'ИГРОК 2'],
   setupMode: 'duel',
+  challenge: null,
   phase: 'idle',
   target: null,
   targets: null,
@@ -105,6 +106,8 @@ function init() {
     if (params.get('auto') === 'solo') startGame('solo', ['ИГРОК']);
     if (params.get('auto') === 'duel') startGame('duel', ['ИГРОК 1', 'ИГРОК 2']);
   }
+  state.challenge = parseChallenge();
+  updateChallengeBanner();
 }
 
 function loadPrefs() {
@@ -609,6 +612,10 @@ function bindUi() {
     state.sound.ui();
     showMenu();
   });
+  $('btn-challenge-close').addEventListener('click', () => {
+    const el = $('challenge-banner');
+    if (el) el.hidden = true;
+  });
 
   document.addEventListener('pointerdown', () => {
     if (state.sound.ctx) state.sound.resume();
@@ -1098,9 +1105,12 @@ function showResults(game) {
         <div><b>${p.bestCombo}</b><span>лучшая серия</span></div>
         <div><b>${formatScore(state.bestSolo)}</b><span>рекорд</span></div>
       </div>
-      ${leaderSaveHtml(p, endless)}`;
+      ${leaderSaveHtml(p, endless)}
+      ${challengeHtml(p, endless)}`;
     const saveBtn = document.getElementById('btn-leader-save');
     if (saveBtn) saveBtn.addEventListener('click', () => saveLeaderScore(p, endless));
+    const shareBtn = document.getElementById('btn-share');
+    if (shareBtn) shareBtn.addEventListener('click', () => shareChallenge(endless ? 'endless' : 'solo', p.score, state.leaderName || 'ИГРОК'));
     again.textContent = 'ЕЩЁ РАЗ';
     if (p.lives <= 0) state.sound.lose();
     else state.sound.win();
@@ -1232,6 +1242,73 @@ async function showLeaders() {
       </div>`).join('');
   }
   state.sound.ui();
+}
+
+function parseChallenge() {
+  try {
+    const raw = new URLSearchParams(location.search).get('challenge');
+    if (!raw) return null;
+    const o = JSON.parse(decodeURIComponent(raw));
+    if (!o || typeof o.s !== 'number') return null;
+    return {
+      mode: o.m === 'endless' ? 'endless' : 'solo',
+      score: Math.max(0, Math.round(o.s)),
+      name: String(o.n || 'Друг').trim().slice(0, 14) || 'Друг',
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function challengeLink(mode, score, name) {
+  const payload = encodeURIComponent(JSON.stringify({
+    m: mode === 'endless' ? 'endless' : 'solo',
+    s: Math.round(score || 0),
+    n: String(name || 'ИГРОК').trim().slice(0, 14) || 'ИГРОК',
+  }));
+  return `${location.origin}${location.pathname}?challenge=${payload}`;
+}
+
+async function shareChallenge(mode, score, name) {
+  const url = challengeLink(mode, score, name);
+  const text = `Побей мой рекорд в СИЛУЭТ: ${formatScore(score)} очков (${mode === 'endless' ? 'бесконечный' : 'соло'})`;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: 'СИЛУЭТ — вызов', text, url });
+      return;
+    }
+  } catch (_) {
+    /* пользователь отменил — пробуем буфер */
+  }
+  try {
+    await navigator.clipboard.writeText(`${text}\n${url}`);
+    showToast('Ссылка на вызов скопирована');
+  } catch (_) {
+    showToast(`Скопируй ссылку: ${url}`);
+  }
+}
+
+function challengeHtml(p, endless) {
+  const c = state.challenge;
+  const mode = endless ? 'endless' : 'solo';
+  const beat = c && c.mode === mode && p.score > c.score;
+  return `
+    <div class="challenge-block">
+      ${beat ? `<p class="challenge-beat">🎉 Ты побил рекорд ${escapeHtml(c.name)} — ${formatScore(c.score)}!</p>` : ''}
+      <button id="btn-share" class="btn btn--ghost">ПОДЕЛИТЬСЯ ВЫЗОВОМ</button>
+    </div>`;
+}
+
+function updateChallengeBanner() {
+  const el = $('challenge-banner');
+  if (!el) return;
+  const c = state.challenge;
+  if (c) {
+    el.hidden = false;
+    setText('challenge-text', `Вызов от ${c.name}: побей ${formatScore(c.score)} очков в «${c.mode === 'endless' ? 'БЕСКОНЕЧНЫЙ' : 'СОЛО'}»`);
+  } else {
+    el.hidden = true;
+  }
 }
 
 /* ------------------------------------------------------------------ */

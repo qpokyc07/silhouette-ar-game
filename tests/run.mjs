@@ -239,9 +239,9 @@ test('impact длится фиксированное время', () => {
 
 console.log('\nНовые режимы');
 
-test('набор поз расширен: 30 одиночных и 10 парных', () => {
-  assert.equal(POSES.length, 30);
-  assert.equal(JOINT_POSES.length, 10);
+test('набор поз расширен: 50 одиночных и 25 парных', () => {
+  assert.equal(POSES.length, 50);
+  assert.equal(JOINT_POSES.length, 25);
   for (const p of JOINT_POSES) {
     assert.ok(p.joint, p.id);
     assert.ok(p.left && p.right, p.id);
