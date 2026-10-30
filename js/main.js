@@ -44,6 +44,7 @@ const state = {
   lastNames: ['ИГРОК 1', 'ИГРОК 2'],
   setupMode: 'duel',
   challenge: null,
+  photos: [],
   phase: 'idle',
   target: null,
   targets: null,
@@ -440,6 +441,7 @@ function startGame(mode, names) {
   state.phase = 'prep';
   state.target = null;
   state.targets = null;
+  state.photos = [];
   state.anchorSmooth = null;
   state.lastSample = null;
   state.lastDetect = 0;
@@ -947,6 +949,7 @@ function processGameEvents() {
     }
     if (ev.type === 'impact') {
       state.phase = 'impact';
+      capturePhoto();
       onImpact(ev);
       continue;
     }
@@ -1106,7 +1109,8 @@ function showResults(game) {
         <div><b>${formatScore(state.bestSolo)}</b><span>рекорд</span></div>
       </div>
       ${leaderSaveHtml(p, endless)}
-      ${challengeHtml(p, endless)}`;
+      ${challengeHtml(p, endless)}
+      ${photosHtml()}`;
     const saveBtn = document.getElementById('btn-leader-save');
     if (saveBtn) saveBtn.addEventListener('click', () => saveLeaderScore(p, endless));
     const shareBtn = document.getElementById('btn-share');
@@ -1130,7 +1134,8 @@ function showResults(game) {
         <div><b>${avg}%</b><span>точность</span></div>
         <div><b>${p.bestCombo}</b><span>лучшая серия</span></div>
         <div><b>${p.lives}</b><span>жизней</span></div>
-      </div>`;
+      </div>
+      ${photosHtml()}`;
     again.textContent = 'ЕЩЁ РАЗ';
     if (p.lives <= 0) state.sound.lose();
     else state.sound.win();
@@ -1148,12 +1153,13 @@ function showResults(game) {
         <div><b>${game.roundsTotal}</b><span>теней у каждого</span></div>
         <div><b>${Math.round(Math.max(a.avgAccuracy, b.avgAccuracy) * 100)}%</b><span>лучшая точность</span></div>
         <div><b>${Math.max(a.bestCombo, b.bestCombo)}</b><span>лучшая серия</span></div>
-      </div>`;
+      </div>
+      ${photosHtml()}`;
     again.textContent = 'РЕВАНШ';
     state.sound.win();
   }
 
-  state.scene.burst(state.w / 2, state.h * 0.4, 70, ['#ffd166', '#79f7ff', '#a6ffbb', '#ffffff'], 420);
+  state.scene.burst(state.w / 2, state.h * 0.4, 70, ['#ffd166', '#79f7ff', '#bfff3c', '#ffffff'], 420);
 }
 
 function duelRow(p, game, winner) {
@@ -1309,6 +1315,41 @@ function updateChallengeBanner() {
   } else {
     el.hidden = true;
   }
+}
+
+function capturePhoto() {
+  const v = state.video;
+  if (!v || v.readyState < 2 || !v.videoWidth) return;
+  const canvas = document.createElement('canvas');
+  canvas.width = v.videoWidth;
+  canvas.height = v.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    state.photos.push({ url, round: state.game ? state.game.roundNumber : state.photos.length + 1 });
+  }, 'image/jpeg', 0.88);
+}
+
+function photosHtml() {
+  const photos = state.photos || [];
+  if (!photos.length) return '';
+  const items = photos.map((p) => `<div class="photo-item"><img src="${p.url}" alt="Снимок позы ${p.round}" /></div>`).join('');
+  return `
+    <div class="photo-gallery">
+      <div class="photo-gallery__head">
+        <span>ТВОИ СНИМКИ</span>
+        <b>${photos.length}</b>
+      </div>
+      <div class="photo-gallery__grid">${items}</div>
+      <div class="photo-cta">
+        <img src="qrcode.png" alt="QR-код Телеграм" class="photo-cta__qr" />
+        <p>Хочешь эти фото? Забери их в <a href="https://t.me/qpokycnow" target="_blank" rel="noopener">ТГ</a><br /><small>выдача через бота — скоро</small></p>
+      </div>
+    </div>`;
 }
 
 /* ------------------------------------------------------------------ */
