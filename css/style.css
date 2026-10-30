@@ -2921,3 +2921,26 @@ input:focus-visible {
   letter-spacing: 0.08em;
   color: var(--amber);
 }
+
+/* ------------------------- контакт (футер) ------------------------- */
+
+.contact-line {
+  margin: 14px 0 0;
+  color: var(--dim);
+  font-size: 10px;
+  text-align: center;
+}
+
+.contact-line a {
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.contact-line a:hover {
+  color: var(--amber);
+}
+
+.intro-footer .contact-line {
+  margin: 0;
+  align-self: center;
+}
