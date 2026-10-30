@@ -344,11 +344,11 @@ export class Scene {
     const fig = this._fig(target.pose);
     if (!fig) return;
     const p = state.phase === 'approach' ? smoothstep(target.progress || 0) : 1;
-    const scale = target.anchor.scale * (state.phase === 'approach' ? 0.3 + 0.7 * easeOut(p) : 1);
+    const scale = target.anchor.scale * (state.phase === 'approach' ? 0.3 + 0.7 * easeOut(p) : 1) * 0.75;
     const rise = state.phase === 'approach' ? (1 - easeOut(p)) * (state.videoRect?.h || this.h) * 0.18 : 0;
     const locked = state.phase === 'hold';
     const edge = locked ? COLORS.amber : COLORS.cyan;
-    const fade = locked ? 1 - 0.92 * smoothstep(state.holdFade || 0) : 1;
+    const fade = locked ? 1 - smoothstep(state.holdFade || 0) : 1;
     const alpha = (state.phase === 'approach' ? 0.4 + p * 0.58 : 0.84) * fade;
     const bodyAlpha = (state.phase === 'approach' ? 0.96 + p * 0.04 : 0.42) * fade;
 

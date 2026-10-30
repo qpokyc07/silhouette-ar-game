@@ -408,6 +408,18 @@ input:focus-visible {
   line-height: 1;
 }
 
+.quality-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--lime);
+}
+
+.icon-btn.is-on {
+  border-color: rgba(191, 255, 60, 0.5);
+  background: rgba(191, 255, 60, 0.08);
+}
+
 /* ==================================================================
    Интро
    ================================================================== */

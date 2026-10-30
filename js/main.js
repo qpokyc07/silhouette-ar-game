@@ -59,6 +59,7 @@ const state = {
   sound: new Sound(),
   soundOn: true,
   photosEnabled: true,
+  cameraQuality: '720',
   bestSolo: 0,
   leaderName: 'ИГРОК',
   countShown: null,
@@ -123,16 +124,18 @@ function loadPrefs() {
       state.sound.enabled = data.sound;
     }
     if (typeof data.photos === 'boolean') state.photosEnabled = data.photos;
+    if (data.cameraQuality === '720' || data.cameraQuality === '1080') state.cameraQuality = data.cameraQuality;
   } catch (_) {
     /* noop */
   }
   syncSoundUI();
   syncPhotosUI();
+  syncCameraQualityUI();
 }
 
 function savePrefs() {
   try {
-    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn, name: state.leaderName, photos: state.photosEnabled }));
+    localStorage.setItem(STORE_KEY, JSON.stringify({ bestSolo: state.bestSolo, sound: state.soundOn, name: state.leaderName, photos: state.photosEnabled, cameraQuality: state.cameraQuality }));
   } catch (_) {
     /* noop */
   }
@@ -298,8 +301,8 @@ async function startCamera() {
       audio: false,
       video: {
         facingMode: { ideal: 'user' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
+        width: { ideal: state.cameraQuality === '1080' ? 1920 : 1280 },
+        height: { ideal: state.cameraQuality === '1080' ? 1080 : 720 },
         frameRate: { ideal: 30, max: 30 },
       },
     });
@@ -592,6 +595,9 @@ function bindUi() {
   for (const el of document.querySelectorAll('[data-photos]')) {
     el.addEventListener('click', togglePhotos);
   }
+  for (const el of document.querySelectorAll('[data-quality]')) {
+    el.addEventListener('click', toggleCameraQuality);
+  }
   for (const el of document.querySelectorAll('[data-full]')) {
     el.addEventListener('click', toggleFullscreen);
   }
@@ -678,6 +684,30 @@ function syncPhotosUI() {
     el.setAttribute('aria-pressed', String(state.photosEnabled));
     const label = el.querySelector('.photo-label');
     if (label) label.textContent = state.photosEnabled ? 'ФОТО' : 'БЕЗ ФОТО';
+  }
+}
+
+async function toggleCameraQuality() {
+  state.cameraQuality = state.cameraQuality === '1080' ? '720' : '1080';
+  state.sound.ui();
+  savePrefs();
+  syncCameraQualityUI();
+  if (state.cameraOn) {
+    try {
+      await startCamera();
+      showToast(state.cameraQuality === '1080' ? 'Камера: 1080p (качество)' : 'Камера: 720p (плавно)');
+    } catch (_) {
+      showToast('Не удалось переключить качество камеры');
+    }
+  }
+}
+
+function syncCameraQualityUI() {
+  for (const el of document.querySelectorAll('[data-quality]')) {
+    const label = el.querySelector('.quality-label');
+    if (label) label.textContent = state.cameraQuality === '1080' ? '1080p' : '720p';
+    el.classList.toggle('is-on', state.cameraQuality === '1080');
+    el.setAttribute('aria-pressed', String(state.cameraQuality === '1080'));
   }
 }
 
